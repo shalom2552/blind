@@ -189,6 +189,11 @@ void play(char* s)
     char* history = (char*) malloc(strlen(s));
     assert(history && "Buy more RAM");
 
+    char* c = strchr(s, '\n');
+    if (c) {
+        *c = '\0';
+    }
+
     // trim spaces and tabs prefix
     for (; s[idx] == ' '; ++idx) {
         display(" ");
@@ -196,6 +201,14 @@ void play(char* s)
 
     while (s[idx] != '\0')
     {
+        // line end with space
+        if (s[idx] == ' ' && s[idx + 1] == '\0') { getchar(); break; }
+        // trim long spaces and tabs
+        while (idx > 0 && s[idx - 1] == ' ' && s[idx] == ' ') {
+            display(" ");
+            ++idx;
+        }
+
         char c = getchar();
 
         // start the clock on first type (after getchar)
@@ -268,8 +281,13 @@ void run_provided_text(int argc, char** argv)
 {
     // input string provided
     if (input_string_line) {
+        // TODO: remove
+        DEBUG("input: <%s>\n", input_string_line);
         play(input_string_line);
         return;
+    } else {
+        // TODO: remove
+        DEBUG("No input string privided");
     }
 
     // play rest of cmdline args as text
@@ -354,7 +372,6 @@ void parse_args(int argc, char** argv)
         c = getopt_long(argc, argv, "hbvs:f:", lo, &option_idx);
         if (c == -1) break;
 
-// BUG: on single char opt with arugments the '=' is left in the optval
         switch (c) {
             case 'h':
                 help();
@@ -418,3 +435,29 @@ int main(int argc, char** argv)
     return 0;
 }
 
+// FIX: BUGS:
+//
+//      BUG: 60, hard
+//          string input not terinated:
+//              ```
+//              ❯ ./blind -s "this           " asd asd
+//              DEBUG: input: <this           >
+//              this           asd
+//              ```
+//
+//      BUG: 40, medium
+//          on single char opt with arugments the '=' is left in the optval
+//
+//
+// NOTE: FEATURES:
+//
+//      NOTE: 70, easy
+//          add total skiped to total scores in file mode.
+//
+//      NOTE: 40, small
+//          hide cursor and blink current word.
+//
+//      NOTE: 30, medium
+//          caculate mid line scrors (WPM is the issue, how to update mid line?)
+//          or document that mid line enter not save stats.
+//

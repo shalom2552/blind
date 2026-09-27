@@ -4,7 +4,7 @@
 I wanted to improve my typing speed and yet not leaving my terminal, so I made
 this toy C project to practice my touch typing.
 
-No AI used at any level in this project - only vim magic.
+No AI - only vim magic.
 
 ## Run
 
