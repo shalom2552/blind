@@ -1,20 +1,35 @@
 /*
- * blind - simple typing practice in the terminal.
+ * blind - 
+ * A program to practice blind-typing in the terminal.
  *
- * Can be use with a provided text or with the existing presets.
+ *   Practice blind-typing speed, right on the terminal
+ *   using either an existing presets, or a provided text.
+ *   Provided text can be either string argument or a full
+ *   text file from any kind.
+ *   WPM and accuracy or errors are calculated and shown
+ *   at the end of each line. Type <C-c> to exit at any time.
  *
  * Usage:
- *     blind [options...] [STRING]
+ *   blind [OPTIONS] [STRING|FILE]
  *
  * Options:
- *     -h, --help       display help message
- *     -b, --block      block on wrong typing
- *     --show-actual    show the actual typed letter on error
- *     --allow-back     allow backspace for correction
+ *   -h            display help message
+ *   -b            block on wrong typing
+ *   -f=FILE       practice on FILE line
+ *
+ *   --help        display help message
+ *   --block       block on wrong typing
+ *   --file=FILE   practice on FILE line
+ *   --show-actual show the actual typed letter
+ *   --allow-back  allow backspace for correction
+ *
+ * STRING
+ *   one line of text. quoted or unquoted.
  *
  * Example:
- *     blind -b
- *     blind "line to practice"
+ *   blind -b
+ *   blind \"line to practice on\"
+ *   blind --file <path-to-file>
  *
  * author: shalom2552
  * date: 2026-09-24
@@ -23,6 +38,8 @@
 #include <bits/getopt_core.h>
 #include <getopt.h>
 #include <signal.h>
+#include <stdcountof.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,7 +47,10 @@
 #include <time.h>
 #include <unistd.h>
 
-#define MAX_TEXT_LEN 256
+#define DEBUG(...)   fprintf(stderr, "DEBUG: "__VA_ARGS__)
+#define display(...) do { if (!getenv("NDISPLAY")) printf(""__VA_ARGS__); } while (0)
+
+#define MAX_TEXT_LEN 2048
 
 #define RED   "\033[31m"
 #define GREEN "\033[32m"
@@ -40,15 +60,23 @@
 #define RST   "\033[0m"
 #define BACK  "\033[D"
 
-enum {
+enum Options {
     OPT_SHOW_ACTUAL = 256,
     OPT_ALLOW_BACKSPACE,
 };
 
+enum InputMode {
+    DEFAULT_INPUT,
+    TEXT_INPUT,
+    FILE_INPUT
+};
+
+int input_mode = DEFAULT_INPUT;
 int blocking_mode          = 0;
 int allow_backspace_mode   = 0;
 int show_actual_typed_mode = 0;
-int show_line_score   = 1;
+int hide_line_score        = 0;
+char* input_file_path;
 
 struct {
     int    count;
@@ -83,50 +111,64 @@ static char* Data[] = {
 
 void usage(void)
 {
-    fprintf(stderr, "blind: isage: blind [options ...] [STRING]");
+    fprintf(stderr, "blind: usage: blind [OPTIONS] [STRING|FILE]");
 }
 
 void help(void)
 {
-    printf(
-        "Blind typing on the terminal writen in C                 \n"
-        "                                                         \n"
-        "Usage:                                                   \n"
-        "  blind [options ...] [STRING]                           \n"
-        "                                                         \n"
-        "Options:                                                 \n"
-        "  -h, --help       display help message                  \n"
-        "  -b, --block      block on wrong typing                 \n"
-        "  --show-actual    show the actual typed letter on error \n"
-        "  --allow-back     allow backspace for correction        \n"
-        "                                                         \n"
-        "STRING                                                   \n"
-        "  one line of text.                                      \n"
-        "                                                         \n"
-        "Example:                                                 \n"
-        "  blind -b                                               \n"
-        "  blind \"line to practice\"                             \n"
+    fprintf(stderr,
+            "A program to practice blind-typing in the terminal.       \n"
+            "                                                          \n"
+            "  Practice blind-typing speed, right on the terminal      \n"
+            "  using either an existing presets, or a provided text.   \n"
+            "  Provided text can be either string argument or a full   \n"
+            "  text file from any kind.                                \n"
+            "  WPM and accuracy or errors are calculated and shown     \n"
+            "  at the end of each line. Type <C-c> to exit at any time.\n"
+            "                                                          \n"
+            "Usage:                                                    \n"
+            "  blind [OPTIONS] [STRING|FILE]                           \n"
+            "                                                          \n"
+            "Options:                                                  \n"
+            "  -h            display help message                      \n"
+            "  -b            block on wrong typing                     \n"
+            "  -f=FILE       practice on FILE line                     \n"
+            "                                                          \n"
+            "  --help        display help message                      \n"
+            "  --block       block on wrong typing                     \n"
+            "  --file=FILE   practice on FILE line                     \n"
+            "  --show-actual show the actual typed letter              \n"
+            "  --allow-back  allow backspace for correction            \n"
+            "                                                          \n"
+            "STRING                                                    \n"
+            "  one line of text. quoted or unquoted.                   \n"
+            "                                                          \n"
+            "Example:                                                  \n"
+            "  blind -b                                                \n"
+            "  blind \"line to practice on\"                           \n"
+            "  blind --file <path-to-file>                             \n"
     );
 }
 
 void print_result(int wpm, double accuracy, int errors) {
-    printf(DIM"WPM: "RST"%d\n"RST, wpm);
+    display(DIM"WPM: "RST"%d\n"RST, wpm);
     if (blocking_mode) {
-        printf(DIM"Errors: "RST"%s%d\n"RST, errors == 0 ? GREEN : RED, errors);
+        display(DIM"Errors: "RST"%s%d\n"RST, errors == 0 ? GREEN : RED, errors);
     } else {
-        printf(DIM"Accuracy: "RST"%s%.2f%%\n"RST, accuracy > 75 ? GREEN : RED, accuracy);
+        display(DIM"Accuracy: "RST"%s%.2f%%\n"RST, accuracy > 75 ? GREEN : RED, accuracy);
     }
 }
 
 void print_totals(void) {
-    printf(DIM"\n=== Sumary ===\n");
-    printf(DIM"Lines: "RST"%d\n", score.count);
+    display("\n");
+    display(DIM"\n=============== Sumary ===============\n");
+    display(DIM"Lines: "RST"%d\n", score.count);
     print_result(score.wpm, score.accuracy, score.errors);
 }
 
 void play(char* s) {
     tcflush(STDIN_FILENO, TCIFLUSH);           // flush the input buffer
-    printf(DIM"\n%s\r"RST, s); fflush(stdout); // print the text
+    display(DIM"\n%s\r"RST, s); fflush(stdout); // print the text
 
     int cur     = 0;
     int correct = 0;
@@ -154,21 +196,20 @@ void play(char* s) {
                 } else {
                     --errors;
                 }
-                printf(BACK DIM"%c"BACK RST, s[cur]);
+                display(BACK DIM"%c"BACK RST, s[cur]);
             }
             continue;
         }
 
         if (c == s[cur]) {
             ++correct;
-            printf(GREEN"%c"RST, c);
-
+            display(GREEN"%c"RST, c);
         } else {
             ++errors;
             if (blocking_mode) {
                 continue;
             }
-            printf(RED"%c"RST, show_actual_typed_mode ? c : s[cur]);
+            display(RED"%c"RST, show_actual_typed_mode ? c : s[cur]);
         }
 
         fflush(stdout);
@@ -186,13 +227,11 @@ void play(char* s) {
         score.accuracy  = (score.accuracy * score.count + accuracy) / (score.count + 1);
         score.count     += 1;
         score.errors    += errors;
-        printf("\n\n");
-        if (show_line_score) {
+        if (!hide_line_score) {
+            display("\n\n");
             print_result(wpm, accuracy, errors);
         }
     }
-
-    printf("\n");
 }
 
 void run_presets(void) {
@@ -219,6 +258,29 @@ void run_provided_text(int argc, char** argv)
     play(text);
 }
 
+void run_file_input(void)
+{
+    FILE*   finput;
+    char*   line = NULL;
+    size_t  size = 0;
+    ssize_t nread;
+
+    finput = fopen(input_file_path, "r");
+    if (!finput) {
+        perror("fopen");
+        return;
+    }
+
+    while ((nread = getline(&line, &size, finput)) != -1) {
+        *strchr(line, '\n') = '\0';
+        play(line);
+    }
+
+    free(line);
+    fclose(finput);
+    print_totals();
+}
+
 struct termios term;
 
 void init(void) {
@@ -233,6 +295,7 @@ void cleanup(void) {
 }
 
 void handle_siginit(int sig) {
+    print_totals();
     (void)sig;
     exit(0);
 }
@@ -243,10 +306,11 @@ void parse_args(int argc, char** argv)
     for (;;) {
         int option_idx;
         static struct option lo[] = {
-            { "help",        no_argument, 0, 'h'                 },
-            { "block",       no_argument, 0, 'b'                 },
-            { "show-actual", no_argument, 0, OPT_SHOW_ACTUAL     },
-            { "allow-back",  no_argument, 0, OPT_ALLOW_BACKSPACE },
+            { "help",        no_argument,       0, 'h'                 },
+            { "block",       no_argument,       0, 'b'                 },
+            { "file",        required_argument, 0, 'f'                 },
+            { "show-actual", no_argument,       0, OPT_SHOW_ACTUAL     },
+            { "allow-back",  no_argument,       0, OPT_ALLOW_BACKSPACE },
             {0}
         };
 
@@ -260,6 +324,12 @@ void parse_args(int argc, char** argv)
 
             case 'b':
                 blocking_mode = 1;
+                break;
+
+            case 'f':
+                input_mode = FILE_INPUT;
+                input_file_path = optarg;
+                hide_line_score = 1;
                 break;
 
             case OPT_SHOW_ACTUAL:
@@ -284,11 +354,17 @@ int main(int argc, char** argv) {
 
     parse_args(argc, argv);
 
-    // run the provided text or the presets
+    // assuming rest of arrgs are the text input
     if (optind < argc) {
-        run_provided_text(argc, argv);
-    } else {
+        input_mode = TEXT_INPUT;
+    }
+
+    if (input_mode == DEFAULT_INPUT) {
         run_presets();
+    } else if (input_mode == TEXT_INPUT) {
+        run_provided_text(argc, argv);
+    } else if (input_mode == FILE_INPUT) {
+        run_file_input();
     }
 
     return 0;
