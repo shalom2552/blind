@@ -1,30 +1,35 @@
 /*
- * blind - 
- * A program to practice blind-typing in the terminal.
+ * Blind - A program to practice blind-typing in the terminal.
  *
- *   Practice blind-typing speed, right on the terminal
- *   using either an existing presets, or a provided text.
- *   Provided text can be either string argument or a full
- *   text file from any kind.
- *   WPM and accuracy or errors are calculated and shown
- *   at the end of each line. Type <C-c> to exit at any time.
+ * Practice blind-typing speed, right on the terminal using either an existing presets, or a provided text.
+ * Provided text can be either string argument or a full text file from any kind.
+ * WPM and accuracy or errors are calculated and shown at the end of each line.
  *
  * Usage:
  *   blind [OPTIONS] [STRING|FILE]
  *
+ * Keys:
+ *   <RETURN>          ENTER to skip a line
+ *   <CTRL-C>          EXIT at any time
+ *
  * Options:
- *   -h            display help message
- *   -b            block on wrong typing
- *   -f=FILE       practice on FILE line
+ *   -h                display help message
+ *   -v                show version number
+ *   -b                block on wrong typing
+ *   -f=FILE           practice on FILE line
+ *   -s=STRING         practice on a provided string
  *
- *   --help        display help message
- *   --block       block on wrong typing
- *   --file=FILE   practice on FILE line
- *   --show-actual show the actual typed letter
- *   --allow-back  allow backspace for correction
+ *   --help            display help message
+ *   --block           block on wrong typing
+ *   --version         show version number
+ *   --file=FILE       practice on FILE line
+ *   --string=STRING   practice on a provided string
+ *   --show-actual     show the actual typed letter
+ *   --allow-back      allow backspace for correction
  *
- * STRING
- *   one line of text. quoted or unquoted.
+ * Arguments:
+ *   STRING            one line of text. quoted or unquoted.
+ *   FILE              any file containing text
  *
  * Example:
  *   blind -b
@@ -36,6 +41,7 @@
  */
 #include <assert.h>
 #include <bits/getopt_core.h>
+#include <complex.h>
 #include <getopt.h>
 #include <signal.h>
 #include <stdcountof.h>
@@ -47,18 +53,20 @@
 #include <time.h>
 #include <unistd.h>
 
+#define NAME    "blind"
+#define VERSION "0.2.0"
+#define MAX_TEXT_LINE_LEN 2048
+
 #define DEBUG(...)   fprintf(stderr, "DEBUG: "__VA_ARGS__)
 #define display(...) do { if (!getenv("NDISPLAY")) printf(""__VA_ARGS__); } while (0)
 
-#define MAX_TEXT_LEN 2048
-
 #define RED   "\033[31m"
 #define GREEN "\033[32m"
+#define UNDER "\033[4m"
 #define DIM   "\033[2m"
 #define BOLD  "\033[1m"
-#define UNDER "\033[4m"
-#define RST   "\033[0m"
 #define BACK  "\033[D"
+#define RST   "\033[0m"
 
 enum Options {
     OPT_SHOW_ACTUAL = 256,
@@ -67,7 +75,7 @@ enum Options {
 
 enum InputMode {
     DEFAULT_INPUT,
-    TEXT_INPUT,
+    STRING_INPUT,
     FILE_INPUT
 };
 
@@ -76,7 +84,9 @@ int blocking_mode          = 0;
 int allow_backspace_mode   = 0;
 int show_actual_typed_mode = 0;
 int hide_line_score        = 0;
-char* input_file_path;
+
+char* input_file_path   = NULL;
+char* input_string_line = NULL;
 
 struct {
     int    count;
@@ -111,7 +121,7 @@ static char* Data[] = {
 
 void usage(void)
 {
-    fprintf(stderr, "blind: usage: blind [OPTIONS] [STRING|FILE]");
+    fprintf(stderr, "blind: usage: blind [OPTIONS] [STRING|FILE]\n");
 }
 
 void help(void)
@@ -122,26 +132,31 @@ void help(void)
             "  Practice blind-typing speed, right on the terminal      \n"
             "  using either an existing presets, or a provided text.   \n"
             "  Provided text can be either string argument or a full   \n"
-            "  text file from any kind.                                \n"
-            "  WPM and accuracy or errors are calculated and shown     \n"
-            "  at the end of each line. Type <C-c> to exit at any time.\n"
+            "  text file from any kind. WPM and accuracy or errors are \n"
+            "  calculated and shown at the end of each line.           \n"
             "                                                          \n"
-            "Usage:                                                    \n"
-            "  blind [OPTIONS] [STRING|FILE]                           \n"
+            "Keys:                                                     \n"
+            "  <RETURN>          ENTER to skip a line                  \n"
+            "  <CTRL-C>          EXIT at any time                      \n"
             "                                                          \n"
             "Options:                                                  \n"
-            "  -h            display help message                      \n"
-            "  -b            block on wrong typing                     \n"
-            "  -f=FILE       practice on FILE line                     \n"
+            "  -h                display help message                  \n"
+            "  -v                show version number                   \n"
+            "  -b                block on wrong typing                 \n"
+            "  -f=FILE           practice on FILE line                 \n"
+            "  -s=STRING         practice on a provided string         \n"
             "                                                          \n"
-            "  --help        display help message                      \n"
-            "  --block       block on wrong typing                     \n"
-            "  --file=FILE   practice on FILE line                     \n"
-            "  --show-actual show the actual typed letter              \n"
-            "  --allow-back  allow backspace for correction            \n"
+            "  --help            display help message                  \n"
+            "  --block           block on wrong typing                 \n"
+            "  --version         show version number                   \n"
+            "  --file=FILE       practice on FILE line                 \n"
+            "  --string=STRING   practice on a provided string         \n"
+            "  --show-actual     show the actual typed letter          \n"
+            "  --allow-back      allow backspace for correction        \n"
             "                                                          \n"
-            "STRING                                                    \n"
-            "  one line of text. quoted or unquoted.                   \n"
+            "Arguments:                                                \n"
+            "  STRING            one line of text. quoted or unquoted. \n"
+            "  FILE              any file containing text              \n"
             "                                                          \n"
             "Example:                                                  \n"
             "  blind -b                                                \n"
@@ -150,7 +165,8 @@ void help(void)
     );
 }
 
-void print_result(int wpm, double accuracy, int errors) {
+void print_result(int wpm, double accuracy, int errors)
+{
     display(DIM"WPM: "RST"%d\n"RST, wpm);
     if (blocking_mode) {
         display(DIM"Errors: "RST"%s%d\n"RST, errors == 0 ? GREEN : RED, errors);
@@ -159,14 +175,16 @@ void print_result(int wpm, double accuracy, int errors) {
     }
 }
 
-void print_totals(void) {
+void print_totals(void)
+{
     display("\n");
     display(DIM"\n=============== Sumary ===============\n");
     display(DIM"Lines: "RST"%d\n", score.count);
     print_result(score.wpm, score.accuracy, score.errors);
 }
 
-void play(char* s) {
+void play(char* s)
+{
     tcflush(STDIN_FILENO, TCIFLUSH);           // flush the input buffer
     display(DIM"\n%s\r"RST, s); fflush(stdout); // print the text
 
@@ -177,18 +195,23 @@ void play(char* s) {
     char* history = (char*) malloc(strlen(s));
     assert(history && "Buy more RAM");
 
+    // trim spaces and tabs prefix
+    for (; s[cur] == ' '; ++cur) {
+        display(" ");
+    }
+
     clock_gettime(CLOCK_MONOTONIC, &start);
     while (s[cur] != '\0')
     {
         char c = getchar();
 
-        if (c == '\n') {
+        if (c == '\n') { // skip line on enter
             break;
 
         } else if (c == 27) { // skip escape key
             getchar(); getchar(); continue;
 
-        } else if (c == 127) { // backspace
+        } else if (c == 127) { // backspace - backtrack
             if (cur > 0 && allow_backspace_mode) {
                 --cur;
                 if (history[cur] == s[cur]) {
@@ -217,7 +240,7 @@ void play(char* s) {
     }
     clock_gettime(CLOCK_MONOTONIC, &end);
 
-    // update scores only if started this line
+    // update scores if line started
     if (cur > 0) {
         double time     = (double)(end.tv_sec - start.tv_sec) + (double)(end.tv_nsec - start.tv_nsec) / 1000000000.0;
         double accuracy = (double)correct / strlen(s) * 100;
@@ -225,8 +248,8 @@ void play(char* s) {
 
         score.wpm       = (score.wpm * score.count + wpm) / (score.count + 1);
         score.accuracy  = (score.accuracy * score.count + accuracy) / (score.count + 1);
-        score.count     += 1;
         score.errors    += errors;
+        score.count     += 1;
         if (!hide_line_score) {
             display("\n\n");
             print_result(wpm, accuracy, errors);
@@ -234,22 +257,29 @@ void play(char* s) {
     }
 }
 
-void run_presets(void) {
+void run_presets(void)
+{
     int i = 0;
     while (Data[i] != 0) {
-        play(Data[i]);
-        i++;
+        play(Data[i++]);
     }
     print_totals();
 }
 
 void run_provided_text(int argc, char** argv)
 {
-    char text[MAX_TEXT_LEN] = "";
+    // input string provided
+    if (input_string_line) {
+        play(input_string_line);
+        return;
+    }
+
+    // play rest of cmdline args as text
+    char text[MAX_TEXT_LINE_LEN] = "";
     while (optind < argc) {
         strcat(text, argv[optind++]);
 
-        // add space if its not the last
+        // seprate arguments by space
         if (optind < argc) {
             strcat(text, " ");
         }
@@ -271,6 +301,7 @@ void run_file_input(void)
         return;
     }
 
+    // play each line of the file
     while ((nread = getline(&line, &size, finput)) != -1) {
         *strchr(line, '\n') = '\0';
         play(line);
@@ -283,18 +314,21 @@ void run_file_input(void)
 
 struct termios term;
 
-void init(void) {
+void init(void)
+{
     tcgetattr(STDIN_FILENO, &term);
     struct termios raw = term;
     raw.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
-void cleanup(void) {
+void cleanup(void)
+{
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &term);
 }
 
-void handle_siginit(int sig) {
+void handle_siginit(int sig)
+{
     print_totals();
     (void)sig;
     exit(0);
@@ -307,14 +341,16 @@ void parse_args(int argc, char** argv)
         int option_idx;
         static struct option lo[] = {
             { "help",        no_argument,       0, 'h'                 },
+            { "version",     no_argument,       0, 'v'                 },
             { "block",       no_argument,       0, 'b'                 },
             { "file",        required_argument, 0, 'f'                 },
+            { "string",      required_argument, 0, 's'                 },
             { "show-actual", no_argument,       0, OPT_SHOW_ACTUAL     },
             { "allow-back",  no_argument,       0, OPT_ALLOW_BACKSPACE },
             {0}
         };
 
-        c = getopt_long(argc, argv, "hbf:", lo, &option_idx);
+        c = getopt_long(argc, argv, "hbvsf:", lo, &option_idx);
         if (c == -1) break;
 
         switch (c) {
@@ -322,8 +358,17 @@ void parse_args(int argc, char** argv)
                 help();
                 exit(0);
 
+            case 'v':
+                display("%s: %s\n", NAME, VERSION);
+                exit(0);
+
             case 'b':
                 blocking_mode = 1;
+                break;
+
+            case 's':
+                input_mode = STRING_INPUT;
+                input_string_line = optarg;
                 break;
 
             case 'f':
@@ -347,21 +392,22 @@ void parse_args(int argc, char** argv)
     }
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     atexit(cleanup);
     signal(SIGINT, handle_siginit);
     init();
 
     parse_args(argc, argv);
 
-    // assuming rest of arrgs are the text input
+    // HACK: assuming rest of args are the text input
     if (optind < argc) {
-        input_mode = TEXT_INPUT;
+        input_mode = STRING_INPUT;
     }
 
     if (input_mode == DEFAULT_INPUT) {
         run_presets();
-    } else if (input_mode == TEXT_INPUT) {
+    } else if (input_mode == STRING_INPUT) {
         run_provided_text(argc, argv);
     } else if (input_mode == FILE_INPUT) {
         run_file_input();
