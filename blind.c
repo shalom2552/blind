@@ -1,7 +1,7 @@
 /*
- * Blind - A program to practice blind-typing in the terminal.
+ * Blind - A simple program to practice touch-typing in the terminal.
  *
- * Practice blind-typing speed, right on the terminal using either an existing presets, or a provided text.
+ * Practice touch-typing speed, right on the terminal using either an existing presets, or a provided text.
  * Provided text can be either string argument or a full text file from any kind.
  * WPM and accuracy or errors are calculated and shown at the end of each line.
  *
@@ -95,27 +95,19 @@ struct {
     double accuracy;
 } score = {0};
 
+// https://clagnut.com/blog/2380
 static char* Data[] = {
-    "1. Crazy Fredrick bought many very exquisite opal rings in Zurich.",
-    "2. Six big devils from Japan quickly forgot how to waltz together.",
-    "3. The five boxing wizards jump quickly across the misty mountain ridge.",
-    "4. Two driven jocks help fax my big quiz to the head office.",
-    "5. Sphinx of black quartz, judge my vow under the starry sky.",
-    "6. Quiet explorers venture through frozen tundra seeking lost artifacts.",
-    "7. Cozy sphinx waves quart jug of bad milk at the traveler.",
-    "8. The quick brown fox jumps over the lazy dog near the riverbank.",
-    "9. How vexingly quick daft zebras jump across wide wooden fences.",
-    "10. Five quacking zephyrs jolt my wax bed during the cold night.",
-    "11. Jim quickly realized that the beautiful gown was expensive.",
-    "12. Pack my box with five dozen liquor jugs before noon today.",
-    "13. Jackdaws love my big sphinx of quartz sculpted from rare stone.",
-    "14. Back in my quaint garden, jaunty zinnias vie for yellow spots.",
-    "15. Complex algorithms solve difficult problems with surprising efficiency.",
-    "16. Bright vixens jump, dozy fowl quack, and quiet sheep graze safely.",
-    "17. A mad boxer shot a quick, gloved jab to the jaw of his foe.",
-    "18. Grumpy wizards make toxic brew for the evil queen to drink.",
-    "19. We promptly judged antique ivory buckles for the prize ceremony.",
-    "20. Puzzled by the mysterious message, he searched for a hidden clue.",
+    "Who packed five dozen old quart jugs in my box?",
+    "The quick brown fox jumped over the lazy dogs.",
+    "Woven silk pyjamas exchanged for blue quartz.",
+    "Brawny gods just flocked up to quiz and vex him.",
+    "Twelve ziggurats quickly jumped a finch box.",
+    "Prating jokers quizzically vexed me with fibs.",
+    "Amazingly few discotheques provide jukeboxes.",
+    "The quick onyx goblin jumps over the lazy dwarf.",
+    "The lazy major was fixing Cupid’s broken quiver.",
+    "My faxed joke won a pager in the cable TV quiz show.",
+    "Jacky can now give six big tips from the old quiz.",
     0
 };
 
@@ -127,9 +119,9 @@ void usage(void)
 void help(void)
 {
     fprintf(stderr,
-            "A program to practice blind-typing in the terminal.       \n"
+            "A program to practice touch-typing in the terminal.       \n"
             "                                                          \n"
-            "  Practice blind-typing speed, right on the terminal      \n"
+            "  Practice touch-typing speed, right on the terminal      \n"
             "  using either an existing presets, or a provided text.   \n"
             "  Provided text can be either string argument or a full   \n"
             "  text file from any kind. WPM and accuracy or errors are \n"
