@@ -303,8 +303,11 @@ void run_file_input(void)
 
     // play each line of the file
     while ((nread = getline(&line, &size, finput)) != -1) {
-        *strchr(line, '\n') = '\0';
-        play(line);
+        char* c = strchr(line, '\n');
+        if (c) {
+            *c = '\0';
+            play(line);
+        }
     }
 
     free(line);
