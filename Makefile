@@ -1,5 +1,5 @@
 
-SRC := blind-typing.c
+SRC := blind.c
 BIN := blind
 
 all:
