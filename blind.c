@@ -42,6 +42,7 @@
 #include <assert.h>
 #include <bits/getopt_core.h>
 #include <complex.h>
+#include <errno.h>
 #include <getopt.h>
 #include <signal.h>
 #include <stdcountof.h>
@@ -180,22 +181,25 @@ void play(char* s)
     tcflush(STDIN_FILENO, TCIFLUSH);           // flush the input buffer
     display(DIM"\n%s\r"RST, s); fflush(stdout); // print the text
 
-    int cur     = 0;
+    int idx     = 0;
     int correct = 0;
     int errors  = 0;
+    int total   = 0;
     struct timespec start, end;
     char* history = (char*) malloc(strlen(s));
     assert(history && "Buy more RAM");
 
     // trim spaces and tabs prefix
-    for (; s[cur] == ' '; ++cur) {
+    for (; s[idx] == ' '; ++idx) {
         display(" ");
     }
 
-    clock_gettime(CLOCK_MONOTONIC, &start);
-    while (s[cur] != '\0')
+    while (s[idx] != '\0')
     {
         char c = getchar();
+
+        // start the clock on first type (after getchar)
+        if (!total) clock_gettime(CLOCK_MONOTONIC, &start);
 
         if (c == '\n') { // skip line on enter
             break;
@@ -204,19 +208,20 @@ void play(char* s)
             getchar(); getchar(); continue;
 
         } else if (c == 127) { // backspace - backtrack
-            if (cur > 0 && allow_backspace_mode) {
-                --cur;
-                if (history[cur] == s[cur]) {
+            if (idx > 0 && allow_backspace_mode) {
+                --idx;
+                --total;
+                if (history[idx] == s[idx]) {
                     --correct;
                 } else {
                     --errors;
                 }
-                display(BACK DIM"%c"BACK RST, s[cur]);
+                display(BACK DIM"%c"BACK RST, s[idx]);
             }
             continue;
         }
 
-        if (c == s[cur]) {
+        if (c == s[idx]) {
             ++correct;
             display(GREEN"%c"RST, c);
         } else {
@@ -224,19 +229,20 @@ void play(char* s)
             if (blocking_mode) {
                 continue;
             }
-            display(RED"%c"RST, show_actual_typed_mode ? c : s[cur]);
+            display(RED"%c"RST, show_actual_typed_mode ? c : s[idx]);
         }
 
         fflush(stdout);
-        history[cur++] = c;
+        history[idx++] = c;
+        ++total;
     }
     clock_gettime(CLOCK_MONOTONIC, &end);
 
     // update scores if line started
-    if (cur > 0) {
+    if (idx > 0) {
         double time     = (double)(end.tv_sec - start.tv_sec) + (double)(end.tv_nsec - start.tv_nsec) / 1000000000.0;
         double accuracy = (double)correct / strlen(s) * 100;
-        int wpm         = (strlen(s) / 5.0) / (time / 60.0);
+        int wpm         = ((double)total / 5.0) / (time / 60.0);
 
         score.wpm       = (score.wpm * score.count + wpm) / (score.count + 1);
         score.accuracy  = (score.accuracy * score.count + accuracy) / (score.count + 1);
@@ -289,7 +295,7 @@ void run_file_input(void)
 
     finput = fopen(input_file_path, "r");
     if (!finput) {
-        perror("fopen");
+        fprintf(stderr, "fopen: %s: %s\n", strerror(errno), input_file_path);
         return;
     }
 
@@ -348,6 +354,7 @@ void parse_args(int argc, char** argv)
         c = getopt_long(argc, argv, "hbvsf:", lo, &option_idx);
         if (c == -1) break;
 
+// BUG: on single char opt with arugments the '=' is left in the optval
         switch (c) {
             case 'h':
                 help();
@@ -395,8 +402,8 @@ int main(int argc, char** argv)
 
     parse_args(argc, argv);
 
-    // HACK: assuming rest of args are the text input
-    if (optind < argc) {
+    // HACK: assuming rest of args are the text input if no input mode provided
+    if (optind < argc && input_mode == DEFAULT_INPUT) {
         input_mode = STRING_INPUT;
     }
 
