@@ -16,12 +16,6 @@
  *     blind -b
  *     blind "line to practice"
  *
- * TODO:
- *   - accept a file to practice its lines:
- *      1. must start with the first letter (skip spaces)
- *      2. handle tabs, skip empty line but show them.
- *      3. do not show score on each line.
- *
  * author: shalom2552
  * date: 2026-09-24
  */
@@ -51,9 +45,10 @@ enum {
     OPT_ALLOW_BACKSPACE,
 };
 
-int blocking          = 0;
-int allow_backspace   = 0;
-int show_actual_typed = 0;
+int blocking_mode          = 0;
+int allow_backspace_mode   = 0;
+int show_actual_typed_mode = 0;
+int show_line_score   = 1;
 
 struct {
     int    count;
@@ -86,9 +81,37 @@ static char* Data[] = {
     0
 };
 
+void usage(void)
+{
+    fprintf(stderr, "blind: isage: blind [options ...] [STRING]");
+}
+
+void help(void)
+{
+    printf(
+        "Blind typing on the terminal writen in C                 \n"
+        "                                                         \n"
+        "Usage:                                                   \n"
+        "  blind [options ...] [STRING]                           \n"
+        "                                                         \n"
+        "Options:                                                 \n"
+        "  -h, --help       display help message                  \n"
+        "  -b, --block      block on wrong typing                 \n"
+        "  --show-actual    show the actual typed letter on error \n"
+        "  --allow-back     allow backspace for correction        \n"
+        "                                                         \n"
+        "STRING                                                   \n"
+        "  one line of text.                                      \n"
+        "                                                         \n"
+        "Example:                                                 \n"
+        "  blind -b                                               \n"
+        "  blind \"line to practice\"                             \n"
+    );
+}
+
 void print_result(int wpm, double accuracy, int errors) {
     printf(DIM"WPM: "RST"%d\n"RST, wpm);
-    if (blocking) {
+    if (blocking_mode) {
         printf(DIM"Errors: "RST"%s%d\n"RST, errors == 0 ? GREEN : RED, errors);
     } else {
         printf(DIM"Accuracy: "RST"%s%.2f%%\n"RST, accuracy > 75 ? GREEN : RED, accuracy);
@@ -124,7 +147,7 @@ void play(char* s) {
             getchar(); getchar(); continue;
 
         } else if (c == 127) { // backspace
-            if (cur > 0 && allow_backspace) {
+            if (cur > 0 && allow_backspace_mode) {
                 --cur;
                 if (history[cur] == s[cur]) {
                     --correct;
@@ -142,10 +165,10 @@ void play(char* s) {
 
         } else {
             ++errors;
-            if (blocking) {
+            if (blocking_mode) {
                 continue;
             }
-            printf(RED"%c"RST, show_actual_typed ? c : s[cur]);
+            printf(RED"%c"RST, show_actual_typed_mode ? c : s[cur]);
         }
 
         fflush(stdout);
@@ -164,7 +187,9 @@ void play(char* s) {
         score.count     += 1;
         score.errors    += errors;
         printf("\n\n");
-        print_result(wpm, accuracy, errors);
+        if (show_line_score) {
+            print_result(wpm, accuracy, errors);
+        }
     }
 
     printf("\n");
@@ -195,43 +220,21 @@ void run_provided_text(int argc, char** argv)
 }
 
 struct termios term;
+
 void init(void) {
     tcgetattr(STDIN_FILENO, &term);
     struct termios raw = term;
     raw.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
+
 void cleanup(void) {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &term);
 }
-void handle_siginit(int sig) { (void)sig; exit(0); }
 
-void usage(void)
-{
-    fprintf(stderr, "blind: isage: blind [options ...] [STRING]");
-}
-
-void help(void)
-{
-    printf(
-        "Blind typing on the terminal writen in C                 \n"
-        "                                                         \n"
-        "Usage:                                                   \n"
-        "  blind [options ...] [STRING]                            \n"
-        "                                                         \n"
-        "Options:                                                 \n"
-        "  -h, --help       display help message                  \n"
-        "  -b, --block      block on wrong typing                 \n"
-        "  --show-actual    show the actual typed letter on error \n"
-        "  --allow-back     allow backspace for correction        \n"
-        "                                                         \n"
-        "STRING                                                   \n"
-        "  one line of text.                                      \n"
-        "                                                         \n"
-        "Example:                                                 \n"
-        "  blind -b                                               \n"
-        "  blind \"line to practice\"                             \n"
-    );
+void handle_siginit(int sig) {
+    (void)sig;
+    exit(0);
 }
 
 void parse_args(int argc, char** argv)
@@ -247,7 +250,7 @@ void parse_args(int argc, char** argv)
             {0}
         };
 
-        c = getopt_long(argc, argv, "hb", lo, &option_idx);
+        c = getopt_long(argc, argv, "hbf:", lo, &option_idx);
         if (c == -1) break;
 
         switch (c) {
@@ -256,18 +259,17 @@ void parse_args(int argc, char** argv)
                 exit(0);
 
             case 'b':
-                blocking = 1;
+                blocking_mode = 1;
                 break;
 
             case OPT_SHOW_ACTUAL:
-                show_actual_typed = 1;
+                show_actual_typed_mode = 1;
                 break;
 
             case OPT_ALLOW_BACKSPACE:
-                allow_backspace = 1;
+                allow_backspace_mode = 1;
                 break;
 
-            case '?':
             default:
                 usage();
                 exit(1);
