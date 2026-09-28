@@ -52,6 +52,6 @@ Example:
 
 ## Licence
 
-Code: [MIT](LICENSE)
+Code: [GPL](LICENSE)
 
 Presets: [Clugnut](https://clagnut.com/blog/2380) (origin Wikipedia)
