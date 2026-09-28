@@ -427,6 +427,14 @@ int main(int argc, char** argv)
 
 // FIX: BUGS:
 //
+//      BUG: 90, ?
+//          on text line larger then the terminal the text stays in the input buffer
+//          The line wraps makes it wrong.
+//          Fix options:
+//              1. ignore and document
+//              2. print the line to the end of terminal
+//              3. stop and throw
+//
 //      BUG: 70, medium
 //          in file mode with blank lines, we get 0 WPM after <C-c>
 //          suspect - indented lines count as started and caculate to the total scores
