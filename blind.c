@@ -14,15 +14,16 @@
  *  -v                   show version number
  *  -b                   block on wrong typing
  *  -f FILE              practice on FILE lines
- *  -l N                 line number to start in the file
+ *  -l N                 file line number to start on
  *
  *  --help               display help message
  *  --block              block on wrong typing
  *  --version            show version number
  *  --file=FILE          practice on FILE lines
- *  --line-number=N      line number to start in the file
+ *  --line-number=N      file line number to start on
  *  --show-actual        show the actual typed letter
  *  --allow-back         allow backspace for correction
+ *  --alt-screen         run the program in alt-screen
  *
  * Arguments:
  *  STRING               one line of text. quoted or unquoted.
@@ -52,7 +53,7 @@
 #include <unistd.h>
 
 #define NAME    "blind"
-#define VERSION "0.2.1"
+#define VERSION "0.2.2"
 #define MAX_TEXT_LINE_LEN 2048
 
 #define no_display() getenv("NDISPLAY")
@@ -70,6 +71,7 @@
 enum Options {
     OPT_SHOW_ACTUAL = 256,
     OPT_ALLOW_BACKSPACE,
+    OPT_ALT_SCREEN,
 };
 
 enum InputMode {
@@ -83,6 +85,7 @@ int blocking_mode          = 0;
 int allow_backspace_mode   = 0;
 int show_actual_typed_mode = 0;
 int hide_line_score        = 0;
+int run_in_alt_screen      = 0;
 int file_start_line        = 1;
 
 char* input_file_path   = NULL;
@@ -111,6 +114,11 @@ static char* Data[] = {
     0
 };
 
+void version(void)
+{
+    fprintf(stderr, "%s: %s\n", NAME, VERSION);
+}
+
 void usage(void)
 {
     fprintf(stderr, "blind: usage: blind [OPTIONS] [STRING|FILE]\n");
@@ -136,15 +144,16 @@ void help(void)
         " -v                   show version number                   \n"
         " -b                   block on wrong typing                 \n"
         " -f FILE              practice on FILE lines                \n"
-        " -l N                 line number to start in the file      \n"
+        " -l N                 file line number to start on          \n"
         "                                                            \n"
         " --help               display help message                  \n"
         " --block              block on wrong typing                 \n"
         " --version            show version number                   \n"
         " --file=FILE          practice on FILE lines                \n"
-        " --line-number=N      line number to start in the file      \n"
+        " --line-number=N      file line number to start on          \n"
         " --show-actual        show the actual typed letter          \n"
         " --allow-back         allow backspace for correction        \n"
+        " --alt-screen         run the program in alt-screen         \n"
         "                                                            \n"
         "Arguments:                                                  \n"
         " STRING               one line of text. quoted or unquoted. \n"
@@ -169,10 +178,13 @@ void print_result(int wpm, double accuracy, int errors)
 
 void print_totals(void)
 {
+    if (run_in_alt_screen) display("\033[?1049l"); // print to the terminal
     display("\n");
     display(DIM"\n=============== Sumary ===============\n");
     display(DIM"Lines: "RST"%d\n", score.count);
     print_result(score.wpm, score.accuracy, score.errors);
+    // back to alt-screen (cleanup already exits it)
+    if (run_in_alt_screen) display("\033[?1049h");
 }
 
 void play(char* s)
@@ -331,6 +343,7 @@ void init(void)
         struct termios raw = term;
         raw.c_lflag &= ~(ICANON | ECHO);
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+        if (run_in_alt_screen) display("\033[?1049h");
     } else {
         DEBUG("running in NDISPLAY mode\n");
     }
@@ -339,6 +352,7 @@ void init(void)
 void cleanup(void)
 {
     if (!no_display()) {
+        if (run_in_alt_screen) display("\033[?1049l");
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &term);
     }
 }
@@ -361,8 +375,9 @@ void parse_args(int argc, char** argv)
             { "block",       no_argument,       0, 'b'                 },
             { "file",        required_argument, 0, 'f'                 },
             { "start-line",  required_argument, 0, 'l'                 },
-            { "show-actual", no_argument,       0, OPT_SHOW_ACTUAL     },
             { "allow-back",  no_argument,       0, OPT_ALLOW_BACKSPACE },
+            { "show-actual", no_argument,       0, OPT_SHOW_ACTUAL     },
+            { "alt-screen",  no_argument,       0, OPT_ALT_SCREEN      },
             {0}
         };
 
@@ -375,7 +390,7 @@ void parse_args(int argc, char** argv)
                 exit(0);
 
             case 'v':
-                display("%s: %s\n", NAME, VERSION);
+                version();
                 exit(0);
 
             case 'b':
@@ -392,12 +407,16 @@ void parse_args(int argc, char** argv)
                 hide_line_score = 1;
                 break;
 
+            case OPT_ALLOW_BACKSPACE:
+                allow_backspace_mode = 1;
+                break;
+
             case OPT_SHOW_ACTUAL:
                 show_actual_typed_mode = 1;
                 break;
 
-            case OPT_ALLOW_BACKSPACE:
-                allow_backspace_mode = 1;
+            case OPT_ALT_SCREEN:
+                run_in_alt_screen = 1;
                 break;
 
             default:
@@ -411,9 +430,9 @@ int main(int argc, char** argv)
 {
     atexit(cleanup);
     signal(SIGINT, handle_siginit);
-    init();
 
     parse_args(argc, argv);
+    init();
 
     // HACK: assuming rest of args are the text input if no input mode provided
     //          this allows to run unquoted text: `blind line to practice`
