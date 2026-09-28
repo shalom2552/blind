@@ -53,7 +53,7 @@
 #include <unistd.h>
 
 #define NAME    "blind"
-#define VERSION "0.2.2"
+#define VERSION "0.2.3"
 #define MAX_TEXT_LINE_LEN 2048
 
 #define no_display() getenv("NDISPLAY")
@@ -108,7 +108,7 @@ static char* Data[] = {
     "Prating jokers quizzically vexed me with fibs.",
     "Amazingly few discotheques provide jukeboxes.",
     "The quick onyx goblin jumps over the lazy dwarf.",
-    "The lazy major was fixing Cupid’s broken quiver.",
+    "The lazy major was fixing Cupid's broken quiver.",
     "My faxed joke won a pager in the cable TV quiz show.",
     "Jacky can now give six big tips from the old quiz.",
     0
@@ -454,6 +454,13 @@ int main(int argc, char** argv)
 
 // FIX: BUGS:
 //
+//      BUG: 100, medium
+//          In file mode some lines give huge WPM, need to investigate.
+//          My suspicion is an empty file or un indent or an empty line that
+//              generates a very small time period that poisens the WPM avg.
+//          produced by running on this file header.
+//
+//
 //      BUG: 90, ?
 //          on text line larger then the terminal the text stays in the input buffer
 //          The line wraps makes it wrong.
@@ -474,4 +481,13 @@ int main(int argc, char** argv)
 //      NOTE: 30, medium
 //          caculate mid line scrors (WPM is the issue, how to update mid line?)
 //          or document that mid line enter not save stats.
+//
+//      NOTE: 50, medium
+//          output stats as a json or csv format, so i can track my progress:
+//              {#lines, WPM, [accuracy], [errors]}
+//          either to the terminal or appending to a predefined file
+//          (or to a provided one with flag? i dont want to preovide a flag every
+//              time, just to track my progress).
+//          this tool is not about parsing this output or listing agragations,
+//          this is a blind typing, so just outputing it is sufficient.
 //
