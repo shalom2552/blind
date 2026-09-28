@@ -246,7 +246,7 @@ void play(char* s)
     clock_gettime(CLOCK_MONOTONIC, &end);
 
     // update scores if line started
-    if (idx > 0) {
+    if (total > 0) {
         double time     = (double)(end.tv_sec - start.tv_sec) + (double)(end.tv_nsec - start.tv_nsec) / 1000000000.0;
         double accuracy = (double)correct / strlen(s) * 100;
         int wpm         = ((double)total / 5.0) / (time / 60.0);
@@ -397,6 +397,8 @@ int main(int argc, char** argv)
     parse_args(argc, argv);
 
     // HACK: assuming rest of args are the text input if no input mode provided
+    //          this allows to run unquoted text: `blind line to practice`
+    //          and also easier to parse over a string input flag value which couses bugs
     if (optind < argc && input_mode == DEFAULT_INPUT) {
         input_mode = STRING_INPUT;
     }
