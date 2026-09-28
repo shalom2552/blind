@@ -4,6 +4,8 @@
 I wanted to improve my typing speed and yet not leaving my terminal, so I made
 this toy C project to practice my touch typing.
 
+![demo](demo.gif)
+
 No AI - only vim magic.
 
 ## Run
@@ -20,7 +22,7 @@ blind
 
 I'm not gonna write this again:
 
-```Bash
+```Text
 Keys:
   <RETURN>             ENTER to skip a line
   <CTRL-C>             EXIT at any time
@@ -47,7 +49,7 @@ Arguments:
 
 Example:
   blind -b
-  blind \"line to practice on\"
+  blind "line to practice on"
   blind --file <path-to-file> -l 10
 ```
 
