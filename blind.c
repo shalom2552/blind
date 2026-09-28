@@ -211,9 +211,10 @@ void play(char* s)
         if (!total) clock_gettime(CLOCK_MONOTONIC, &start);
 
         if (c == '\n') { // skip line on enter
+            total = 0;
             break;
 
-        } else if (c == 27) { // skip escape key
+        } else if (c == 27) { // skip escape keys
             getchar(); getchar(); continue;
 
         } else if (c == 127) { // backspace - backtrack
@@ -434,12 +435,6 @@ int main(int argc, char** argv)
 //              1. ignore and document
 //              2. print the line to the end of terminal
 //              3. stop and throw
-//
-//      BUG: 70, medium
-//          in file mode with blank lines, we get 0 WPM after <C-c>
-//          suspect - indented lines count as started and caculate to the total scores
-//          fix: skip if line not started even in auto indent
-//              also, dont caculate totals on empty lines
 //
 //
 // NOTE: FEATURES:
