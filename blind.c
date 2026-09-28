@@ -55,8 +55,9 @@
 #define VERSION "0.2.1"
 #define MAX_TEXT_LINE_LEN 2048
 
+#define no_display() getenv("NDISPLAY")
+#define display(...) do { if (!no_display()) printf(""__VA_ARGS__); } while (0)
 #define DEBUG(...)   fprintf(stderr, "DEBUG: "__VA_ARGS__)
-#define display(...) do { if (!getenv("NDISPLAY")) printf(""__VA_ARGS__); } while (0)
 
 #define RED   "\033[31m"
 #define GREEN "\033[32m"
@@ -325,15 +326,21 @@ struct termios term;
 
 void init(void)
 {
-    tcgetattr(STDIN_FILENO, &term);
-    struct termios raw = term;
-    raw.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+    if (!no_display()) {
+        tcgetattr(STDIN_FILENO, &term);
+        struct termios raw = term;
+        raw.c_lflag &= ~(ICANON | ECHO);
+        tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+    } else {
+        DEBUG("running in NDISPLAY mode\n");
+    }
 }
 
 void cleanup(void)
 {
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &term);
+    if (!no_display()) {
+        tcsetattr(STDIN_FILENO, TCSAFLUSH, &term);
+    }
 }
 
 void handle_siginit(int sig)
