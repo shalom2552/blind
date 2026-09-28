@@ -17,13 +17,11 @@
  *   -v                show version number
  *   -b                block on wrong typing
  *   -f=FILE           practice on FILE line
- *   -s=STRING         practice on a provided string
  *
  *   --help            display help message
  *   --block           block on wrong typing
  *   --version         show version number
  *   --file=FILE       practice on FILE line
- *   --string=STRING   practice on a provided string
  *   --show-actual     show the actual typed letter
  *   --allow-back      allow backspace for correction
  *
@@ -33,7 +31,7 @@
  *
  * Example:
  *   blind -b
- *   blind \"line to practice on\"
+ *   blind "line to practice on"
  *   blind --file <path-to-file>
  *
  * author: shalom2552
@@ -137,13 +135,11 @@ void help(void)
             "  -v                show version number                   \n"
             "  -b                block on wrong typing                 \n"
             "  -f=FILE           practice on FILE line                 \n"
-            "  -s=STRING         practice on a provided string         \n"
             "                                                          \n"
             "  --help            display help message                  \n"
             "  --block           block on wrong typing                 \n"
             "  --version         show version number                   \n"
             "  --file=FILE       practice on FILE line                 \n"
-            "  --string=STRING   practice on a provided string         \n"
             "  --show-actual     show the actual typed letter          \n"
             "  --allow-back      allow backspace for correction        \n"
             "                                                          \n"
@@ -189,6 +185,9 @@ void play(char* s)
     char* history = (char*) malloc(strlen(s));
     assert(history && "Buy more RAM");
 
+    char* c = strchr(s, '\n');
+    if (c) *c = '\0';
+
     // trim spaces and tabs prefix
     for (; s[idx] == ' '; ++idx) {
         display(" ");
@@ -196,6 +195,14 @@ void play(char* s)
 
     while (s[idx] != '\0')
     {
+        // line end with space
+        if (s[idx] == ' ' && s[idx + 1] == '\0') { getchar(); break; }
+        // trim long spaces and tabs
+        while (idx > 0 && s[idx - 1] == ' ' && s[idx] == ' ') {
+            display(" ");
+            ++idx;
+        }
+
         char c = getchar();
 
         // start the clock on first type (after getchar)
@@ -266,12 +273,6 @@ void run_presets(void)
 
 void run_provided_text(int argc, char** argv)
 {
-    // input string provided
-    if (input_string_line) {
-        play(input_string_line);
-        return;
-    }
-
     // play rest of cmdline args as text
     char text[MAX_TEXT_LINE_LEN] = "";
     while (optind < argc) {
@@ -345,16 +346,14 @@ void parse_args(int argc, char** argv)
             { "version",     no_argument,       0, 'v'                 },
             { "block",       no_argument,       0, 'b'                 },
             { "file",        required_argument, 0, 'f'                 },
-            { "string",      required_argument, 0, 's'                 },
             { "show-actual", no_argument,       0, OPT_SHOW_ACTUAL     },
             { "allow-back",  no_argument,       0, OPT_ALLOW_BACKSPACE },
             {0}
         };
 
-        c = getopt_long(argc, argv, "hbvsf:", lo, &option_idx);
+        c = getopt_long(argc, argv, "hbvf:", lo, &option_idx);
         if (c == -1) break;
 
-// BUG: on single char opt with arugments the '=' is left in the optval
         switch (c) {
             case 'h':
                 help();
@@ -366,11 +365,6 @@ void parse_args(int argc, char** argv)
 
             case 'b':
                 blocking_mode = 1;
-                break;
-
-            case 's':
-                input_mode = STRING_INPUT;
-                input_string_line = optarg;
                 break;
 
             case 'f':
@@ -418,3 +412,21 @@ int main(int argc, char** argv)
     return 0;
 }
 
+// FIX: BUGS:
+//
+//      BUG: 40, medium
+//          on single char opt with arugments the '=' is left in the optval
+//
+//
+// NOTE: FEATURES:
+//
+//      NOTE: 70, easy
+//          add total skiped to total scores in file mode.
+//
+//      NOTE: 40, small
+//          hide cursor and blink current word.
+//
+//      NOTE: 30, medium
+//          caculate mid line scrors (WPM is the issue, how to update mid line?)
+//          or document that mid line enter not save stats.
+//

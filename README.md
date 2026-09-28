@@ -33,13 +33,11 @@ Options:
   -v                show version number
   -b                block on wrong typing
   -f=FILE           practice on FILE line
-  -s=STRING         practice on a provided string
 
   --help            display help message
   --block           block on wrong typing
   --version         show version number
   --file=FILE       practice on FILE line
-  --string=STRING   practice on a provided string
   --show-actual     show the actual typed letter
   --allow-back      allow backspace for correction
 
@@ -49,11 +47,12 @@ Arguments:
 
 Example:
   blind -b
-  blind \"line to practice on\"
+  blind "line to practice on"
   blind --file <path-to-file>
 ```
 
 ## Licence
 
 Code: [MIT](LICENSE)
+
 Presets: [Clugnut](https://clagnut.com/blog/2380) (origin Wikipedia)
