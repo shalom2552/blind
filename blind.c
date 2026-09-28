@@ -5,34 +5,33 @@
  * Provided text can be either string argument or a full text file from any kind.
  * WPM and accuracy or errors are calculated and shown at the end of each line.
  *
- * Usage:
- *   blind [OPTIONS] [STRING|FILE]
- *
  * Keys:
- *   <RETURN>          ENTER to skip a line
- *   <CTRL-C>          EXIT at any time
+ *  <RETURN>             ENTER to skip a line
+ *  <CTRL-C>             EXIT at any time
  *
  * Options:
- *   -h                display help message
- *   -v                show version number
- *   -b                block on wrong typing
- *   -f=FILE           practice on FILE line
+ *  -h                   display help message
+ *  -v                   show version number
+ *  -b                   block on wrong typing
+ *  -f FILE              practice on FILE lines
+ *  -l N                 line number to start in the file
  *
- *   --help            display help message
- *   --block           block on wrong typing
- *   --version         show version number
- *   --file=FILE       practice on FILE line
- *   --show-actual     show the actual typed letter
- *   --allow-back      allow backspace for correction
+ *  --help               display help message
+ *  --block              block on wrong typing
+ *  --version            show version number
+ *  --file=FILE          practice on FILE lines
+ *  --line-number=N      line number to start in the file
+ *  --show-actual        show the actual typed letter
+ *  --allow-back         allow backspace for correction
  *
  * Arguments:
- *   STRING            one line of text. quoted or unquoted.
- *   FILE              any file containing text
+ *  STRING               one line of text. quoted or unquoted.
+ *  FILE                 any file containing text
  *
  * Example:
  *   blind -b
- *   blind "line to practice on"
- *   blind --file <path-to-file>
+ *   blind \"line to practice on\"
+ *   blind --file <path-to-file> -l 10
  *
  * author: shalom2552
  * date: 2026-09-24
@@ -53,7 +52,7 @@
 #include <unistd.h>
 
 #define NAME    "blind"
-#define VERSION "0.2.0"
+#define VERSION "0.2.1"
 #define MAX_TEXT_LINE_LEN 2048
 
 #define DEBUG(...)   fprintf(stderr, "DEBUG: "__VA_ARGS__)
@@ -83,6 +82,7 @@ int blocking_mode          = 0;
 int allow_backspace_mode   = 0;
 int show_actual_typed_mode = 0;
 int hide_line_score        = 0;
+int file_start_line        = 1;
 
 char* input_file_path   = NULL;
 char* input_string_line = NULL;
@@ -118,39 +118,41 @@ void usage(void)
 void help(void)
 {
     fprintf(stderr,
-            "A program to practice touch-typing in the terminal.       \n"
-            "                                                          \n"
-            "  Practice touch-typing speed, right on the terminal      \n"
-            "  using either an existing presets, or a provided text.   \n"
-            "  Provided text can be either string argument or a full   \n"
-            "  text file from any kind. WPM and accuracy or errors are \n"
-            "  calculated and shown at the end of each line.           \n"
-            "                                                          \n"
-            "Keys:                                                     \n"
-            "  <RETURN>          ENTER to skip a line                  \n"
-            "  <CTRL-C>          EXIT at any time                      \n"
-            "                                                          \n"
-            "Options:                                                  \n"
-            "  -h                display help message                  \n"
-            "  -v                show version number                   \n"
-            "  -b                block on wrong typing                 \n"
-            "  -f=FILE           practice on FILE line                 \n"
-            "                                                          \n"
-            "  --help            display help message                  \n"
-            "  --block           block on wrong typing                 \n"
-            "  --version         show version number                   \n"
-            "  --file=FILE       practice on FILE line                 \n"
-            "  --show-actual     show the actual typed letter          \n"
-            "  --allow-back      allow backspace for correction        \n"
-            "                                                          \n"
-            "Arguments:                                                \n"
-            "  STRING            one line of text. quoted or unquoted. \n"
-            "  FILE              any file containing text              \n"
-            "                                                          \n"
-            "Example:                                                  \n"
-            "  blind -b                                                \n"
-            "  blind \"line to practice on\"                           \n"
-            "  blind --file <path-to-file>                             \n"
+        "A program to practice touch-typing in the terminal.         \n"
+        "                                                            \n"
+        "  Practice touch-typing speed, right on the terminal        \n"
+        "  using either an existing presets, or a provided text.     \n"
+        "  Provided text can be either string argument or a full     \n"
+        "  text file from any kind. WPM and accuracy or errors are   \n"
+        "  calculated and shown at the end of each line.             \n"
+        "                                                            \n"
+        "Keys:                                                       \n"
+        " <RETURN>             ENTER to skip a line                  \n"
+        " <CTRL-C>             EXIT at any time                      \n"
+        "                                                            \n"
+        "Options:                                                    \n"
+        " -h                   display help message                  \n"
+        " -v                   show version number                   \n"
+        " -b                   block on wrong typing                 \n"
+        " -f FILE              practice on FILE lines                \n"
+        " -l N                 line number to start in the file      \n"
+        "                                                            \n"
+        " --help               display help message                  \n"
+        " --block              block on wrong typing                 \n"
+        " --version            show version number                   \n"
+        " --file=FILE          practice on FILE lines                \n"
+        " --line-number=N      line number to start in the file      \n"
+        " --show-actual        show the actual typed letter          \n"
+        " --allow-back         allow backspace for correction        \n"
+        "                                                            \n"
+        "Arguments:                                                  \n"
+        " STRING               one line of text. quoted or unquoted. \n"
+        " FILE                 any file containing text              \n"
+        "                                                            \n"
+        "Example:                                                    \n"
+        "  blind -b                                                  \n"
+        "  blind \"line to practice on\"                             \n"
+        "  blind --file <path-to-file> -l 10                         \n"
     );
 }
 
@@ -209,9 +211,10 @@ void play(char* s)
         if (!total) clock_gettime(CLOCK_MONOTONIC, &start);
 
         if (c == '\n') { // skip line on enter
+            total = 0;
             break;
 
-        } else if (c == 27) { // skip escape key
+        } else if (c == 27) { // skip escape keys
             getchar(); getchar(); continue;
 
         } else if (c == 127) { // backspace - backtrack
@@ -246,7 +249,7 @@ void play(char* s)
     clock_gettime(CLOCK_MONOTONIC, &end);
 
     // update scores if line started
-    if (idx > 0) {
+    if (total > 0) {
         double time     = (double)(end.tv_sec - start.tv_sec) + (double)(end.tv_nsec - start.tv_nsec) / 1000000000.0;
         double accuracy = (double)correct / strlen(s) * 100;
         int wpm         = ((double)total / 5.0) / (time / 60.0);
@@ -290,8 +293,9 @@ void run_provided_text(int argc, char** argv)
 void run_file_input(void)
 {
     FILE*   finput;
-    char*   line = NULL;
-    size_t  size = 0;
+    char*   line   = NULL;
+    int     line_c = 1;
+    size_t  size   = 0;
     ssize_t nread;
 
     finput = fopen(input_file_path, "r");
@@ -302,6 +306,9 @@ void run_file_input(void)
 
     // play each line of the file
     while ((nread = getline(&line, &size, finput)) != -1) {
+        if (++line_c < file_start_line) continue;
+
+        // only run regular lines (ending with '\n')
         char* c = strchr(line, '\n');
         if (c) {
             *c = '\0';
@@ -346,12 +353,13 @@ void parse_args(int argc, char** argv)
             { "version",     no_argument,       0, 'v'                 },
             { "block",       no_argument,       0, 'b'                 },
             { "file",        required_argument, 0, 'f'                 },
+            { "start-line",  required_argument, 0, 'l'                 },
             { "show-actual", no_argument,       0, OPT_SHOW_ACTUAL     },
             { "allow-back",  no_argument,       0, OPT_ALLOW_BACKSPACE },
             {0}
         };
 
-        c = getopt_long(argc, argv, "hbvf:", lo, &option_idx);
+        c = getopt_long(argc, argv, "hbvf:l:", lo, &option_idx);
         if (c == -1) break;
 
         switch (c) {
@@ -365,6 +373,10 @@ void parse_args(int argc, char** argv)
 
             case 'b':
                 blocking_mode = 1;
+                break;
+
+            case 'l':
+                file_start_line = atoi(optarg);
                 break;
 
             case 'f':
@@ -397,6 +409,8 @@ int main(int argc, char** argv)
     parse_args(argc, argv);
 
     // HACK: assuming rest of args are the text input if no input mode provided
+    //          this allows to run unquoted text: `blind line to practice`
+    //          and also easier to parse over a string input flag value which couses bugs
     if (optind < argc && input_mode == DEFAULT_INPUT) {
         input_mode = STRING_INPUT;
     }
@@ -414,8 +428,13 @@ int main(int argc, char** argv)
 
 // FIX: BUGS:
 //
-//      BUG: 40, medium
-//          on single char opt with arugments the '=' is left in the optval
+//      BUG: 90, ?
+//          on text line larger then the terminal the text stays in the input buffer
+//          The line wraps makes it wrong.
+//          Fix options:
+//              1. ignore and document
+//              2. print the line to the end of terminal
+//              3. stop and throw
 //
 //
 // NOTE: FEATURES:

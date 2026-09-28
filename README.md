@@ -21,34 +21,33 @@ blind
 I'm not gonna write this again:
 
 ```Bash
-Usage:
-  blind [OPTIONS] [STRING|FILE]
-
 Keys:
-  <RETURN>          ENTER to skip a line
-  <CTRL-C>          EXIT at any time
+ <RETURN>             ENTER to skip a line
+ <CTRL-C>             EXIT at any time
 
 Options:
-  -h                display help message
-  -v                show version number
-  -b                block on wrong typing
-  -f=FILE           practice on FILE line
+ -h                   display help message
+ -v                   show version number
+ -b                   block on wrong typing
+ -f FILE              practice on FILE lines
+ -l NUMBER            line number to start in the file
 
-  --help            display help message
-  --block           block on wrong typing
-  --version         show version number
-  --file=FILE       practice on FILE line
-  --show-actual     show the actual typed letter
-  --allow-back      allow backspace for correction
+ --help               display help message
+ --block              block on wrong typing
+ --version            show version number
+ --file=FILE          practice on FILE lines
+ --line-number=N      line number to start in the file
+ --show-actual        show the actual typed letter
+ --allow-back         allow backspace for correction
 
 Arguments:
-  STRING            one line of text. quoted or unquoted.
-  FILE              any file containing text
+ STRING               one line of text. quoted or unquoted.
+ FILE                 any file containing text
 
 Example:
   blind -b
-  blind "line to practice on"
-  blind --file <path-to-file>
+  blind \"line to practice on\"
+  blind --file <path-to-file> -l 10
 ```
 
 ## Licence
