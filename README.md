@@ -22,27 +22,28 @@ I'm not gonna write this again:
 
 ```Bash
 Keys:
- <RETURN>             ENTER to skip a line
- <CTRL-C>             EXIT at any time
+  <RETURN>             ENTER to skip a line
+  <CTRL-C>             EXIT at any time
 
 Options:
- -h                   display help message
- -v                   show version number
- -b                   block on wrong typing
- -f FILE              practice on FILE lines
- -l NUMBER            line number to start in the file
-
- --help               display help message
- --block              block on wrong typing
- --version            show version number
- --file=FILE          practice on FILE lines
- --line-number=N      line number to start in the file
- --show-actual        show the actual typed letter
- --allow-back         allow backspace for correction
+  -h                   display help message
+  -v                   show version number
+  -b                   block on wrong typing
+  -f FILE              practice on FILE lines
+  -l NUMBER            file line number to start on
+ 
+  --help               display help message
+  --block              block on wrong typing
+  --version            show version number
+  --file=FILE          practice on FILE lines
+  --line-number=N      file line number to start on
+  --show-actual        show the actual typed letter
+  --allow-back         allow backspace for correction
+  --alt-screen         run the program in alt-screen
 
 Arguments:
- STRING               one line of text. quoted or unquoted.
- FILE                 any file containing text
+  STRING               one line of text. quoted or unquoted.
+  FILE                 any file containing text
 
 Example:
   blind -b
