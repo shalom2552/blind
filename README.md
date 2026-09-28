@@ -29,8 +29,8 @@ Options:
  -h                   display help message
  -v                   show version number
  -b                   block on wrong typing
- -f=FILE              practice on FILE lines
- -l=NUMBER            line number to start in the file
+ -f FILE              practice on FILE lines
+ -l NUMBER            line number to start in the file
 
  --help               display help message
  --block              block on wrong typing

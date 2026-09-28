@@ -13,8 +13,8 @@
  *  -h                   display help message
  *  -v                   show version number
  *  -b                   block on wrong typing
- *  -f=FILE              practice on FILE lines
- *  -l=N                 line number to start in the file
+ *  -f FILE              practice on FILE lines
+ *  -l N                 line number to start in the file
  *
  *  --help               display help message
  *  --block              block on wrong typing
@@ -134,8 +134,8 @@ void help(void)
         " -h                   display help message                  \n"
         " -v                   show version number                   \n"
         " -b                   block on wrong typing                 \n"
-        " -f=FILE              practice on FILE lines                \n"
-        " -l=N                 line number to start in the file      \n"
+        " -f FILE              practice on FILE lines                \n"
+        " -l N                 line number to start in the file      \n"
         "                                                            \n"
         " --help               display help message                  \n"
         " --block              block on wrong typing                 \n"
@@ -440,9 +440,6 @@ int main(int argc, char** argv)
 //          suspect - indented lines count as started and caculate to the total scores
 //          fix: skip if line not started even in auto indent
 //              also, dont caculate totals on empty lines
-//
-//      BUG: 40, medium
-//          on single char opt with arugments the '=' is left in the optval
 //
 //
 // NOTE: FEATURES:
