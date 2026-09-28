@@ -370,7 +370,7 @@ void parse_args(int argc, char** argv)
             case 'f':
                 input_mode = FILE_INPUT;
                 input_file_path = optarg;
-                hide_line_score = 1;
+                // hide_line_score = 1;
                 break;
 
             case OPT_SHOW_ACTUAL:
@@ -413,6 +413,12 @@ int main(int argc, char** argv)
 }
 
 // FIX: BUGS:
+//
+//      BUG: 70, medium
+//          in file mode with blank lines, we get 0 WPM after <C-c>
+//          suspect - indented lines count as started and caculate to the total scores
+//          fix: skip if line not started even in auto indent
+//              also, dont caculate totals on empty lines
 //
 //      BUG: 40, medium
 //          on single char opt with arugments the '=' is left in the optval
