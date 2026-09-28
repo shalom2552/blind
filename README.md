@@ -36,7 +36,7 @@ Options:
   --block              block on wrong typing
   --version            show version number
   --file=FILE          practice on FILE lines
-  --line-number=N      file line number to start on
+  --start-line=N       file line number to start on
   --show-actual        show the actual typed letter
   --allow-back         allow backspace for correction
   --alt-screen         run the program in alt-screen
