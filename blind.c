@@ -436,7 +436,6 @@ int main(int argc, char** argv)
 
     // HACK: assuming rest of args are the text input if no input mode provided
     //          this allows to run unquoted text: `blind line to practice`
-    //          and also easier to parse over a string input flag value which couses bugs
     if (optind < argc && input_mode == DEFAULT_INPUT) {
         input_mode = STRING_INPUT;
     }
@@ -452,7 +451,8 @@ int main(int argc, char** argv)
     return 0;
 }
 
-// FIX: BUGS:
+//
+// FIX: BUGS
 //
 //      BUG: 100, medium
 //          In file mode some lines give huge WPM, need to investigate.
@@ -460,6 +460,28 @@ int main(int argc, char** argv)
 //              generates a very small time period that poisens the WPM avg.
 //          produced by running on this file header.
 //
+//      BUG: 80, medium
+//          after usage error on invalid args the program get poisened,
+//          and not working, i guess the stdin get filed up or somthing.
+//          reproduce:
+//
+//              ```bash
+//              ❯ blind this is a line --allow-bacl
+//              blind: unrecognized option '--allow-bacl'
+//              blind: usage: blind [OPTIONS] [STRING|FILE]
+//
+//              ❯ blind this is a line --allow-back
+//
+//              this is a line
+//
+//                          WPM: 1467505
+//                                      Accuracy: 0.00%
+//              ```
+//              NOTE: this infects the terminal itself, not this program,
+//                      it adds incremental spaces on each line printed in
+//                      the termina regardless of this program, `try: $ ls -1`
+//                      `tput reset` fixes it.
+//              update: it happens every time we print to stderr (blind -h, blind -v)
 //
 //      BUG: 90, ?
 //          on text line larger then the terminal the text stays in the input buffer
@@ -470,7 +492,7 @@ int main(int argc, char** argv)
 //              3. stop and throw
 //
 //
-// NOTE: FEATURES:
+// NOTE: FEATURES
 //
 //      NOTE: 70, easy
 //          add total skiped to total scores in file mode.
