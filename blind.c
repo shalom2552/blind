@@ -1,9 +1,10 @@
 /*
  * Blind - A simple program to practice touch-typing in the terminal.
  *
- * Practice touch-typing speed, right on the terminal using either an existing presets, or a provided text.
- * Provided text can be either string argument or a full text file from any kind.
- * WPM and accuracy or errors are calculated and shown at the end of each line.
+ * Practice touch-typing speed, right on the terminal using either an existing
+ * presets, or a provided text. Provided text can be either string argument or
+ * a full text file from any kind. WPM and accuracy or errors, are calculated
+ * and shown at the end of each line.
  *
  * Keys:
  *   <RETURN>             ENTER to skip a line
@@ -34,6 +35,7 @@
  *   blind \"line to practice on\"
  *   blind --file <path-to-file> -l 10
  *
+ * repo: https://github.com/shalom2552/blind.git
  * author: shalom2552
  * date: 2026-09-24
  */
@@ -136,7 +138,7 @@ void help(void)
         "  Practice touch-typing speed, right on the terminal\n"
         "  using either an existing presets, or a provided text.\n"
         "  Provided text can be either string argument or a full\n"
-        "  text file from any kind. WPM and accuracy or errors are\n"
+        "  text file from any kind. WPM and accuracy or errors, are\n"
         "  calculated and shown at the end of each line.\n"
         "\n"
         "Keys:\n"
@@ -167,6 +169,9 @@ void help(void)
         "  blind -b\n"
         "  blind \"line to practice on\"\n"
         "  blind --file <path-to-file> -l 10\n"
+        "\n"
+        "Bugs can be reported on GitHub:\n"
+        "https://github.com/shalom2552/blind.git\n"
     );
 }
 
