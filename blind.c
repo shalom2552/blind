@@ -38,12 +38,11 @@
  * date: 2026-09-24
  */
 #include <assert.h>
-#include <bits/getopt_core.h>
+#include <getopt.h>
 #include <complex.h>
 #include <errno.h>
 #include <getopt.h>
 #include <signal.h>
-#include <stdcountof.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,6 +58,7 @@
 #define no_display() getenv("NDISPLAY")
 #define display(...) do { if (!no_display()) printf(""__VA_ARGS__); } while (0)
 #define DEBUG(...)   fprintf(stderr, "DEBUG: "__VA_ARGS__)
+#define countof(x) (sizeof(x) / sizeof((x)[0]))
 
 #define RED   "\033[31m"
 #define GREEN "\033[32m"
