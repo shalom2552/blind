@@ -121,7 +121,7 @@ void version(void)
 
 void usage(void)
 {
-    fprintf(stderr, "blind: usage: blind [OPTIONS] [STRING|FILE]\n");
+    fprintf(stderr, "%s: usage: %s [OPTIONS] [STRING|FILE]\n", NAME, NAME);
 }
 
 void help(void)
@@ -484,8 +484,7 @@ int main(int argc, char** argv)
 //              update: it happens every time we print to stderr (blind -h, blind -v)
 //
 //      BUG: 90, ?
-//          on text line larger then the terminal the text stays in the input buffer
-//          The line wraps makes it wrong.
+//          on text line larger then the terminal the line wraps makes it wrong.
 //          Fix options:
 //              1. ignore and document
 //              2. print the line to the end of terminal
@@ -493,6 +492,9 @@ int main(int argc, char** argv)
 //
 //
 // NOTE: FEATURES
+//
+//      NOTE: 80, easy
+//          consider make end of lines press enter instead of auto new line.
 //
 //      NOTE: 70, easy
 //          add total skiped to total scores in file mode.
