@@ -38,25 +38,26 @@
  * date: 2026-09-24
  */
 #include <assert.h>
-#include <getopt.h>
 #include <complex.h>
 #include <errno.h>
+#include <getopt.h>
 #include <getopt.h>
 #include <signal.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <time.h>
 #include <unistd.h>
 
 #define NAME    "blind"
-#define VERSION "0.2.4"
+#define VERSION "0.2.5"
 #define MAX_TEXT_LINE_LEN 2048
 
 #define no_display() getenv("NDISPLAY")
-#define display(...) do { if (!no_display()) printf(""__VA_ARGS__); } while (0)
+#define display(...) do { if (!no_display()) printf(""__VA_ARGS__); fflush(stdout); } while (0)
 #define DEBUG(...)   fprintf(stderr, "DEBUG: "__VA_ARGS__)
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 
@@ -192,8 +193,10 @@ void print_totals(void)
 
 void play(char* s)
 {
-    tcflush(STDIN_FILENO, TCIFLUSH);           // flush the input buffer
-    display(DIM"\n%s\r"RST, s); fflush(stdout); // print the text
+    tcflush(STDIN_FILENO, TCIFLUSH);              // flush the input buffer
+    struct winsize w; ioctl(0, TIOCGWINSZ, &w);   // get terminal size
+    if (strlen(s) > w.ws_col) s[w.ws_col] = '\0'; // trim the line
+    display(DIM"\n%s\r"RST, s);                   // print dimmed line
 
     int idx     = 0;
     int correct = 0;
@@ -461,14 +464,12 @@ int main(int argc, char** argv)
 //          My suspicion is an empty file or un indent or an empty line that
 //              generates a very small time period that poisens the WPM avg.
 //          produced by running on this file header.
+//          update: this may be caused by single letter line/s.
 //
-//      BUG: 90, ?
-//          on text line larger then the terminal the line wraps makes it wrong.
-//          Fix options:
-//              1. ignore and document
-//              2. print the line to the end of terminal
-//              3. stop and throw
-//
+//      BUG: 10, research
+//          does ioctl() (to get the cols size for wraping line), is POSIX support?
+//          google search says to include <sys/ioctl.h>, but manpage says <stropts.h>
+//          which dosen't compile.
 //
 // NOTE: FEATURES
 //
