@@ -471,9 +471,6 @@ int main(int argc, char** argv)
 //
 // NOTE: FEATURES
 //
-//      NOTE: 80, easy
-//          consider make end of lines press enter instead of auto new line.
-//
 //      NOTE: 70, easy
 //          add total skiped to total scores in file mode.
 //
