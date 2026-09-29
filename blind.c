@@ -53,7 +53,7 @@
 #include <unistd.h>
 
 #define NAME    "blind"
-#define VERSION "0.2.3"
+#define VERSION "0.2.4"
 #define MAX_TEXT_LINE_LEN 2048
 
 #define no_display() getenv("NDISPLAY")
@@ -90,6 +90,9 @@ int file_start_line        = 1;
 
 char* input_file_path   = NULL;
 char* input_string_line = NULL;
+
+int term_initialized = 0;
+struct termios term;
 
 struct {
     int    count;
@@ -334,11 +337,9 @@ void run_file_input(void)
     print_totals();
 }
 
-struct termios term;
-
 void init(void)
 {
-    if (!no_display()) {
+    if (!term_initialized && !no_display()) {
         tcgetattr(STDIN_FILENO, &term);
         struct termios raw = term;
         raw.c_lflag &= ~(ICANON | ECHO);
@@ -347,11 +348,12 @@ void init(void)
     } else {
         DEBUG("running in NDISPLAY mode\n");
     }
+    term_initialized = 1;
 }
 
 void cleanup(void)
 {
-    if (!no_display()) {
+    if (term_initialized && !no_display()) {
         if (run_in_alt_screen) display("\033[?1049l");
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &term);
     }
@@ -459,29 +461,6 @@ int main(int argc, char** argv)
 //          My suspicion is an empty file or un indent or an empty line that
 //              generates a very small time period that poisens the WPM avg.
 //          produced by running on this file header.
-//
-//      BUG: 80, medium
-//          after usage error on invalid args the program get poisened,
-//          and not working, i guess the stdin get filed up or somthing.
-//          reproduce:
-//
-//              ```bash
-//              ❯ blind this is a line --allow-bacl
-//              blind: unrecognized option '--allow-bacl'
-//              blind: usage: blind [OPTIONS] [STRING|FILE]
-//
-//              ❯ blind this is a line --allow-back
-//
-//              this is a line
-//
-//                          WPM: 1467505
-//                                      Accuracy: 0.00%
-//              ```
-//              NOTE: this infects the terminal itself, not this program,
-//                      it adds incremental spaces on each line printed in
-//                      the termina regardless of this program, `try: $ ls -1`
-//                      `tput reset` fixes it.
-//              update: it happens every time we print to stderr (blind -h, blind -v)
 //
 //      BUG: 90, ?
 //          on text line larger then the terminal the line wraps makes it wrong.
