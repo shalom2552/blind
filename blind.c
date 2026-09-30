@@ -98,10 +98,12 @@ int term_initialized = 0;
 struct termios term;
 
 struct {
-    int    count;
-    int    wpm;
-    int    errors;
-    int    skipped;
+    int wpm;
+    int typed_errors;
+    int lines_count;
+    int lines_skipped;
+    int total_letters;
+    int correct_letters;
     double accuracy;
 } score = {0};
 
@@ -178,9 +180,9 @@ void help(void)
 
 void print_result(int wpm, double accuracy, int errors)
 {
-    display(DIM"WPM: "RST"%d\n"RST, wpm);
+    display(DIM"WPM:      "RST"%d\n"RST, wpm);
     if (blocking_mode) {
-        display(DIM"Errors: "RST"%s%d\n"RST, errors == 0 ? GREEN : RED, errors);
+        display(DIM"Errors:   "RST"%s%d\n"RST, errors == 0 ? GREEN : RED, errors);
     } else {
         display(DIM"Accuracy: "RST"%s%.2f%%\n"RST, accuracy > 75 ? GREEN : RED, accuracy);
     }
@@ -190,9 +192,9 @@ void print_totals(void)
 {
     if (run_in_alt_screen) display("\033[?1049l"); // exit alt-screen
     display(DIM"\n=============== Sumary ===============\n");
-    print_result(score.wpm, score.accuracy, score.errors);
-    display(DIM"Lines: "RST"%d\n", score.count);
-    if (score.skipped) display(DIM"Skipped: "RST"%d\n", score.skipped);
+    print_result(score.wpm, score.accuracy, score.typed_errors);
+    if (score.lines_count > 1) display(DIM"Lines:    "RST"%d\n", score.lines_count);
+    if (score.lines_skipped) display(DIM"Skipped:  "RST"%d\n", score.lines_skipped);
     if (run_in_alt_screen) display("\033[?1049h"); // back to alt-screen
 }
 
@@ -220,10 +222,12 @@ void play(char* s)
     }
 
     while (s[idx] != '\0') {
+
         // line end with space
         if (s[idx] == ' ' && s[idx + 1] == '\0') {
             ++idx; break;
         }
+
         // skip long spaces and tabs
         if (idx > 0 && s[idx - 1] == ' ' && s[idx] == ' ') {
             ++idx; display(" "); continue;
@@ -235,7 +239,7 @@ void play(char* s)
         if (!total) clock_gettime(CLOCK_MONOTONIC, &start);
 
         if (c == '\n') { // skip line on enter
-            score.skipped += 1;
+            score.lines_skipped += 1;
             total = 0;
             break;
 
@@ -279,10 +283,13 @@ void play(char* s)
         double accuracy = (double)correct / total * 100;
         int wpm         = ((double)total / 5.0) / (time / 60.0);
 
-        score.wpm       = (score.wpm * score.count + wpm) / (score.count + 1);
-        score.accuracy  = (score.accuracy * score.count + accuracy) / (score.count + 1);
-        score.errors    += errors;
-        score.count     += 1;
+        score.lines_count     += 1;
+        score.total_letters   += total;
+        score.correct_letters += correct;
+        score.typed_errors    += errors;
+        score.accuracy        =  (double)score.correct_letters / score.total_letters * 100;
+        score.wpm             =  (score.wpm * score.lines_count + wpm) / (score.lines_count + 1);
+
         if (!hide_line_score) {
             display("\n\n");
             print_result(wpm, accuracy, errors);
@@ -465,18 +472,6 @@ int main(int argc, char** argv)
 
 //
 // FIX: BUGS
-//
-//      BUG: 80, easy
-//          Accuracy on file does not take into account all the words but rather
-//              the accuracy avg between lines seprately.
-//          prduced on this file header:
-//          ```
-//          /*
-//           * Blind - A simple program to practice touch-typing in the terminal.
-//          Accuracy: 50.00%
-//          ```
-//          all right first line, all wrong second line. should be:
-//              `total_correct / total_letters`
 //
 //      BUG: 10, research
 //          does ioctl() (to get the cols size for wraping line), is POSIX support?
