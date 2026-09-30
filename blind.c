@@ -468,6 +468,18 @@ int main(int argc, char** argv)
 //
 // FIX: BUGS
 //
+//      BUG: 80, easy
+//          Accuracy on file does not take into account all the words but rather
+//              the accuracy avg between lines seprately.
+//          prduced on this file header:
+//          ```
+//          /*
+//           * Blind - A simple program to practice touch-typing in the terminal.
+//          Accuracy: 50.00%
+//          ```
+//          all right first line, all wrong second line. should be:
+//              `total_correct / total_letters`
+//
 //      BUG: 10, research
 //          does ioctl() (to get the cols size for wraping line), is POSIX support?
 //          google search says to include <sys/ioctl.h>, but manpage says <stropts.h>
