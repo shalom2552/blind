@@ -480,8 +480,14 @@ int main(int argc, char** argv)
 //
 // NOTE: FEATURES
 //
-//      NOTE: 70, easy
-//          add total skiped to total scores in file mode.
+//      NOTE: 30, easy
+//          on wrong typed space ' ' add an indication (maybe '_' or red bg ' ')
+//          if using '_':
+//              con: it can clash with real '_' character, lines may already have it.
+//              pro: no need to use bg color.
+//          if using bg color: neesd to add red bg color
+//          in both cases needs to print wehter its actual-typed mode or not,
+//              we dont want to change the original string `s`.
 //
 //      NOTE: 40, small
 //          hide cursor and blink current word.
