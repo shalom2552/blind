@@ -101,6 +101,7 @@ struct {
     int    count;
     int    wpm;
     int    errors;
+    int    skipped;
     double accuracy;
 } score = {0};
 
@@ -187,13 +188,12 @@ void print_result(int wpm, double accuracy, int errors)
 
 void print_totals(void)
 {
-    if (run_in_alt_screen) display("\033[?1049l"); // print to the terminal
-    display("\n");
+    if (run_in_alt_screen) display("\033[?1049l"); // exit alt-screen
     display(DIM"\n=============== Sumary ===============\n");
-    display(DIM"Lines: "RST"%d\n", score.count);
     print_result(score.wpm, score.accuracy, score.errors);
-    // back to alt-screen (cleanup already exits it)
-    if (run_in_alt_screen) display("\033[?1049h");
+    display(DIM"Lines: "RST"%d\n", score.count);
+    if (score.skipped) display(DIM"Skipped: "RST"%d\n", score.skipped);
+    if (run_in_alt_screen) display("\033[?1049h"); // back to alt-screen
 }
 
 void play(char* s)
@@ -214,19 +214,19 @@ void play(char* s)
     char* c = strchr(s, '\n');
     if (c) *c = '\0';
 
-    // trim spaces and tabs prefix
+    // skip spaces and tabs prefix
     for (; s[idx] == ' '; ++idx) {
         display(" ");
     }
 
-    while (s[idx] != '\0')
-    {
+    while (s[idx] != '\0') {
         // line end with space
-        if (s[idx] == ' ' && s[idx + 1] == '\0') { getchar(); break; }
-        // trim long spaces and tabs
-        while (idx > 0 && s[idx - 1] == ' ' && s[idx] == ' ') {
-            display(" ");
-            ++idx;
+        if (s[idx] == ' ' && s[idx + 1] == '\0') {
+            ++idx; break;
+        }
+        // skip long spaces and tabs
+        if (idx > 0 && s[idx - 1] == ' ' && s[idx] == ' ') {
+            ++idx; display(" "); continue;
         }
 
         char c = getchar();
@@ -235,13 +235,14 @@ void play(char* s)
         if (!total) clock_gettime(CLOCK_MONOTONIC, &start);
 
         if (c == '\n') { // skip line on enter
+            score.skipped += 1;
             total = 0;
             break;
 
         } else if (c == 27) { // skip escape keys
             getchar(); getchar(); continue;
 
-        } else if (c == 127) { // backspace - backtrack
+        } else if (c == 127) { // backspace: backtrack
             if (idx > 0 && allow_backspace_mode) {
                 --idx;
                 --total;
@@ -275,7 +276,7 @@ void play(char* s)
     // update scores if line started
     if (total > 1) {
         double time     = (double)(end.tv_sec - start.tv_sec) + (double)(end.tv_nsec - start.tv_nsec) / 1000000000.0;
-        double accuracy = (double)correct / strlen(s) * 100;
+        double accuracy = (double)correct / total * 100;
         int wpm         = ((double)total / 5.0) / (time / 60.0);
 
         score.wpm       = (score.wpm * score.count + wpm) / (score.count + 1);
@@ -294,6 +295,7 @@ void run_presets(void)
     int i = 0;
     while (Data[i] != 0) {
         play(Data[i++]);
+        display("\n");
     }
     print_totals();
 }
@@ -464,15 +466,24 @@ int main(int argc, char** argv)
 //
 // FIX: BUGS
 //
+//      BUG: 80, easy
+//          Accuracy on file does not take into account all the words but rather
+//              the accuracy avg between lines seprately.
+//          prduced on this file header:
+//          ```
+//          /*
+//           * Blind - A simple program to practice touch-typing in the terminal.
+//          Accuracy: 50.00%
+//          ```
+//          all right first line, all wrong second line. should be:
+//              `total_correct / total_letters`
+//
 //      BUG: 10, research
 //          does ioctl() (to get the cols size for wraping line), is POSIX support?
 //          google search says to include <sys/ioctl.h>, but manpage says <stropts.h>
 //          which dosen't compile.
 //
 // NOTE: FEATURES
-//
-//      NOTE: 80, easy
-//          consider make end of lines press enter instead of auto new line.
 //
 //      NOTE: 70, easy
 //          add total skiped to total scores in file mode.
