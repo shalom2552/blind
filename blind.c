@@ -279,7 +279,7 @@ void play(char* s)
     // update scores if line started
     if (total > 1) {
         double time     = (double)(end.tv_sec - start.tv_sec) + (double)(end.tv_nsec - start.tv_nsec) / 1000000000.0;
-        double accuracy = (double)correct / strlen(s) * 100;
+        double accuracy = (double)correct / total * 100;
         int wpm         = ((double)total / 5.0) / (time / 60.0);
 
         score.wpm       = (score.wpm * score.count + wpm) / (score.count + 1);
