@@ -101,6 +101,7 @@ struct {
     int    count;
     int    wpm;
     int    errors;
+    int    skipped;
     double accuracy;
 } score = {0};
 
@@ -192,6 +193,9 @@ void print_totals(void)
     display(DIM"\n=============== Sumary ===============\n");
     display(DIM"Lines: "RST"%d\n", score.count);
     print_result(score.wpm, score.accuracy, score.errors);
+    if (score.skipped > 0) {
+        display(DIM"Skipped: "RST"%d\n", score.skipped);
+    }
     // back to alt-screen (cleanup already exits it)
     if (run_in_alt_screen) display("\033[?1049h");
 }
@@ -214,13 +218,12 @@ void play(char* s)
     char* c = strchr(s, '\n');
     if (c) *c = '\0';
 
-    // trim spaces and tabs prefix
+    // skip spaces and tabs prefix
     for (; s[idx] == ' '; ++idx) {
         display(" ");
     }
 
-    while (s[idx] != '\0')
-    {
+    while (s[idx] != '\0') {
         // line end with space
         if (s[idx] == ' ' && s[idx + 1] == '\0') { getchar(); break; }
         // trim long spaces and tabs
@@ -235,6 +238,7 @@ void play(char* s)
         if (!total) clock_gettime(CLOCK_MONOTONIC, &start);
 
         if (c == '\n') { // skip line on enter
+            score.skipped += 1;
             total = 0;
             break;
 
