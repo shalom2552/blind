@@ -4,7 +4,7 @@
  * Practice touch-typing speed, right on the terminal using either an existing
  * presets, or a provided text. Provided text can be either string argument or
  * a full text file from any kind. WPM and accuracy or errors, are calculated
- * and shown at the end of each line.
+ * and shown at the end.
  *
  * Keys:
  *   <RETURN>             ENTER to skip a line
@@ -142,7 +142,7 @@ void help(void)
         "  using either an existing presets, or a provided text.\n"
         "  Provided text can be either string argument or a full\n"
         "  text file from any kind. WPM and accuracy or errors, are\n"
-        "  calculated and shown at the end of each line.\n"
+        "  calculated and shown at the end.\n"
         "\n"
         "Keys:\n"
         "  <RETURN>             ENTER to skip a line\n"
