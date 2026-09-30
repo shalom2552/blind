@@ -188,16 +188,12 @@ void print_result(int wpm, double accuracy, int errors)
 
 void print_totals(void)
 {
-    if (run_in_alt_screen) display("\033[?1049l"); // print to the terminal
-    display("\n");
+    if (run_in_alt_screen) display("\033[?1049l"); // exit alt-screen
     display(DIM"\n=============== Sumary ===============\n");
-    display(DIM"Lines: "RST"%d\n", score.count);
     print_result(score.wpm, score.accuracy, score.errors);
-    if (score.skipped > 0) {
-        display(DIM"Skipped: "RST"%d\n", score.skipped);
-    }
-    // back to alt-screen (cleanup already exits it)
-    if (run_in_alt_screen) display("\033[?1049h");
+    display(DIM"Lines: "RST"%d\n", score.count);
+    if (score.skipped) display(DIM"Skipped: "RST"%d\n", score.skipped);
+    if (run_in_alt_screen) display("\033[?1049h"); // back to alt-screen
 }
 
 void play(char* s)
@@ -245,7 +241,7 @@ void play(char* s)
         } else if (c == 27) { // skip escape keys
             getchar(); getchar(); continue;
 
-        } else if (c == 127) { // backspace - backtrack
+        } else if (c == 127) { // backspace: backtrack
             if (idx > 0 && allow_backspace_mode) {
                 --idx;
                 --total;
@@ -298,6 +294,7 @@ void run_presets(void)
     int i = 0;
     while (Data[i] != 0) {
         play(Data[i++]);
+        display("\n");
     }
     print_totals();
 }
