@@ -221,11 +221,12 @@ void play(char* s)
 
     while (s[idx] != '\0') {
         // line end with space
-        if (s[idx] == ' ' && s[idx + 1] == '\0') { getchar(); break; }
-        // trim long spaces and tabs
-        while (idx > 0 && s[idx - 1] == ' ' && s[idx] == ' ') {
-            display(" ");
-            ++idx;
+        if (s[idx] == ' ' && s[idx + 1] == '\0') {
+            ++idx; break;
+        }
+        // skip long spaces and tabs
+        if (idx > 0 && s[idx - 1] == ' ' && s[idx] == ' ') {
+            ++idx; display(" "); continue;
         }
 
         char c = getchar();
