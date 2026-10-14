@@ -41,10 +41,9 @@
  */
 #include <assert.h>
 #include <complex.h>
-#include <ctype.h>
 #include <errno.h>
 #include <getopt.h>
-#include <getopt.h>
+#include <locale.h>
 #include <signal.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -54,6 +53,8 @@
 #include <termios.h>
 #include <time.h>
 #include <unistd.h>
+#include <wchar.h>
+#include <wctype.h>
 
 const char* NAME;
 #define VERSION "0.2.6"
@@ -205,77 +206,116 @@ void play(char* s)
     if (strlen(s) > w.ws_col) s[w.ws_col] = '\0'; // trim the line
     display(DIM"\n%s\r"RST, s);                   // print dimmed line
 
-    int idx     = 0;
+    // Convert input line to wide chars for correct UTF-8 handling
+    size_t slen = strlen(s);
+    wchar_t* ws = (wchar_t*) malloc((slen + 1) * sizeof(wchar_t));
+    assert(ws && "Buy more RAM");
+    size_t wlen = mbstowcs(ws, s, slen + 1);
+    if (wlen == (size_t)-1) {
+        // fallback: invalid multibyte sequence
+        free(ws);
+        return;
+    }
+
+    wchar_t* history = (wchar_t*) malloc((wlen + 1) * sizeof(wchar_t));
+    assert(history && "Buy more RAM");
+
+    size_t idx  = 0;
     int correct = 0;
     int errors  = 0;
     int total   = 0;
     struct timespec start, end;
-    char* history = (char*) malloc(strlen(s));
-    assert(history && "Buy more RAM");
-
-    char* c = strchr(s, '\n');
-    if (c) *c = '\0';
 
     // skip spaces and tabs prefix
-    for (; isspace(s[idx]); ++idx) {
+    for (; iswspace(ws[idx]); ++idx) {
         display(" ");
     }
 
-    while (s[idx] != '\0') {
+    while (ws[idx] != L'\0') {
 
         // line end with space
-        if (isspace(s[idx]) && s[idx + 1] == '\0') {
+        if (iswspace(ws[idx]) && ws[idx + 1] == L'\0') {
             ++idx; break;
         }
 
         // skip long spaces and tabs
-        if (idx > 0 && isspace(s[idx - 1]) && isspace(s[idx])) {
+        if (idx > 0 && iswspace(ws[idx - 1]) && iswspace(ws[idx])) {
             ++idx; display(" "); continue;
         }
 
-        char c = getchar();
+        // Read one UTF-8 character (possibly multibyte) from stdin
+        wchar_t wc;
+        {
+            char buf[MB_CUR_MAX + 1];
+            int n = 0;
+            int b = getchar();
+            if (b == EOF) break;
+            buf[n++] = (char)b;
+            // determine expected length of UTF-8 sequence
+            int need = 1;
+            unsigned char ub = (unsigned char)buf[0];
+            if      ((ub & 0x80) == 0x00) need = 1;
+            else if ((ub & 0xE0) == 0xC0) need = 2;
+            else if ((ub & 0xF0) == 0xE0) need = 3;
+            else if ((ub & 0xF8) == 0xF0) need = 4;
+            while (n < need && n < MB_CUR_MAX) {
+                int nb = getchar();
+                if (nb == EOF) break;
+                buf[n++] = (char)nb;
+            }
+            buf[n] = '\0';
+            mbstate_t st;
+            memset(&st, 0, sizeof(st));
+            size_t r = mbrtowc(&wc, buf, n, &st);
+            if (r == (size_t)-1 || r == (size_t)-2) {
+                wc = (wchar_t)(unsigned char)buf[0];
+            }
+        }
 
         // start the clock on first type (after getchar)
         if (!total) clock_gettime(CLOCK_MONOTONIC, &start);
 
-        if (c == '\n') { // skip line on enter
+        if (wc == L'\n') { // skip line on enter
             score.lines_skipped += 1;
             total = 0;
             break;
 
-        } else if (c == 27) { // skip escape keys
+        } else if (wc == 27) { // skip escape keys
             getchar(); getchar(); continue;
 
-        } else if (c == 127) { // backspace: backtrack
+        } else if (wc == 127) { // backspace: backtrack
             if (idx > 0 && allow_backspace_mode) {
                 --idx;
                 --total;
-                if (history[idx] == s[idx]) {
+                if (history[idx] == ws[idx]) {
                     --correct;
                 } else {
                     --errors;
                 }
-                display(BACK DIM"%c"BACK RST, s[idx]);
+                display(BACK DIM"%lc"BACK RST, ws[idx]);
             }
             continue;
         }
 
-        if (c == s[idx]) {
+        if (wc == ws[idx]) {
             ++correct;
-            display(GREEN"%c"RST, c);
+            display(GREEN"%lc"RST, wc);
         } else {
             ++errors;
             if (blocking_mode) {
                 continue;
             }
-            display(RED"%c"RST, show_actual_typed_mode ? c : s[idx]);
+            display(RED"%lc"RST, show_actual_typed_mode ? wc : ws[idx]);
         }
 
         fflush(stdout);
-        history[idx++] = c;
+        history[idx++] = wc;
         ++total;
     }
     clock_gettime(CLOCK_MONOTONIC, &end);
+
+    free(ws);
+    free(history);
 
     // update scores if line started
     if (total > 1) {
@@ -452,6 +492,8 @@ int main(int argc, char** argv)
 {
     atexit(cleanup);
     signal(SIGINT, handle_siginit);
+
+    setlocale(LC_ALL, "");
 
     parse_args(argc, argv);
     init();
