@@ -1,3 +1,4 @@
+#!./.venv/bin/python3
 """
     Parse the `blind` stats file.
 
@@ -25,6 +26,9 @@ import os
 import sys
 from collections import defaultdict
 from typing import NamedTuple
+
+from matplotlib.lines import lineStyles
+import matplotlib.pyplot as plt
 
 DEFAULE_STATS_FILE = f'{os.getenv("HOME")}/.local/share/blind-tt/blind_stats.csv'
 
@@ -55,10 +59,10 @@ def aggregate(mode: str, records: list[Record]) -> Aggregated:
         lines           = sum(r.lines for r in records),
         lines_skipped   = sum(r.lines_skipped for r in records),
         total_letters   = letters,
-        correct_letters = sum(r.correct_letters for r in records),
-        errors          = sum(r.errors for r in records),
-        wpm             = round(sum((r.wpm * r.total_letters) / letters for r in records), 2),
-        accuracy        = round(sum((r.accuracy * r.total_letters) / letters for r in records), 2)
+        correct_letters = round(sum(r.correct_letters for r in records)),
+        errors          = round(sum(r.errors          for r in records)),
+        wpm             = round(sum(r.wpm             * r.total_letters for r in records) / letters, 2),
+        accuracy        = round(sum(r.accuracy        * r.total_letters for r in records) / letters, 2)
     )
 
 class Analyazer:
@@ -66,7 +70,6 @@ class Analyazer:
         self.stats_path:    str   = stats_path
         self.stats_data:    list[Record]  = []
         self.stats_by_mode: dict[str, list[Record]] = defaultdict(list)
-
         self.mode_totals: dict[str, Aggregated]
 
     def load_stats(self):
@@ -91,35 +94,66 @@ class Analyazer:
             return False
 
         for r in self.stats_data:
+            if r.lines == 0: continue
+            self.stats_by_mode['all'].append(r)
             self.stats_by_mode[r.mode].append(r)
         self.mode_totals = {
             mode: aggregate(mode, records)
             for mode, records in self.stats_by_mode.items()
         }
-        self.mode_totals['all'] = aggregate('all', self.stats_data)
         return True
 
-    def show_totals(self):
+    def show_totals(self, selected_mode=''):
         for mode, data in self.mode_totals.items():
+            if selected_mode and mode != selected_mode: continue
             print(f'mode: {mode}')
             for item, value in zip(data._fields, data):
                 print(f'    {item:<20}{value}')
 
+    def plot(self, mode='all'):
+        def rolling(values: list, n: int = 2):
+            out = []
+            for i in range(len(values)):
+                window = values[max(0, i - n + 1): i + 1]
+                out.append(sum(window)/len(window))
+            return out
+
+        mode  = mode or 'all'
+        data  = [r for r in self.stats_by_mode[mode]]
+        times = [r.time for r in data]
+
+        plt.plot(times, [r.wpm * r.accuracy / 100 for r in data],
+                 label='wpm * accuracy', linewidth=2.5, marker='o')
+        plt.plot(times,
+                 [r.wpm for r in data],
+                 label='wpm', linestyle='--', alpha=0.5)
+        plt.plot(times,
+                 [r.accuracy for r in data],
+                 label='accuracy', linestyle='--', alpha=0.5)
+
+        plt.legend()
+        plt.show()
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--file", help="specify a stats file")
+    parser.add_argument("-m", "--mode", help="show only specific mode")
     args = parser.parse_args()
 
-    stats_file = DEFAULE_STATS_FILE
-    if args.file: stats_file = args.file
+    stats_file = args.file if args.file else DEFAULE_STATS_FILE
+    stats_mode = args.mode if args.mode else ''
 
     analyazer = Analyazer(stats_file)
 
     if not analyazer.load_stats():
         sys.exit(1);
 
-    analyazer.show_totals()
+    analyazer.show_totals(stats_mode)
+    analyazer.plot(stats_mode)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit(0)
 
