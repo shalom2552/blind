@@ -1,4 +1,3 @@
-#!./.venv/bin/python3
 """
     Parse the `blind` stats file.
 
@@ -122,16 +121,15 @@ class Analyazer:
         data  = [r for r in self.stats_by_mode[mode]]
         times = [r.time for r in data]
 
-        plt.plot(times, [r.wpm * r.accuracy / 100 for r in data],
+        ax = plt.gca()
+        ax.plot(times, [r.wpm * r.accuracy / 100 for r in data],
                  label='wpm * accuracy', linewidth=2.5, marker='o')
-        plt.plot(times,
-                 [r.wpm for r in data],
-                 label='wpm', linestyle='--', alpha=0.5)
-        plt.plot(times,
-                 [r.accuracy for r in data],
-                 label='accuracy', linestyle='--', alpha=0.5)
 
-        plt.legend()
+        ax2 = ax.twinx()
+        ax2.plot(times, [r.wpm for r in data], label='wpm', linestyle='--', alpha=0.5)
+        ax2.plot(times, [r.accuracy for r in data], label='accuracy', linestyle='--', alpha=0.5)
+
+        ax.figure.legend(loc='upper left')
         plt.show()
 
 def main():

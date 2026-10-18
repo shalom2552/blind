@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+dir=$(dirname "$(readlink -f "$0")")
+exec "$dir/.venv/bin/python3" "$dir/score_stats.py" "$@"
