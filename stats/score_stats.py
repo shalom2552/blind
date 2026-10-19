@@ -119,18 +119,30 @@ class Analyazer:
 
         mode  = mode or 'all'
         data  = [r for r in self.stats_by_mode[mode]]
-        times = [r.time for r in data]
+        # times = [r.time for r in data]
 
         ax = plt.gca()
-        ax.plot(times, [r.wpm * r.accuracy / 100 for r in data],
+        ax.plot([r.wpm * r.accuracy / 100 for r in data],
                  label='wpm * accuracy', linewidth=2.5, marker='o')
 
         ax2 = ax.twinx()
-        ax2.plot(times, [r.wpm for r in data], label='wpm', linestyle='--', alpha=0.5)
-        ax2.plot(times, [r.accuracy for r in data], label='accuracy', linestyle='--', alpha=0.5)
+        ax2.plot([r.wpm for r in data], label='wpm', linestyle='--', alpha=0.5)
+        ax2.plot([r.accuracy for r in data], label='accuracy', linestyle='--', alpha=0.5)
 
         ax.figure.legend(loc='upper left')
         plt.show()
+
+    def show_best(self, by_wpm=True):
+        data = self.stats_data
+        best_run = 0
+        for i in range(len(data)):
+            value = data[i].wpm if by_wpm else data[i].accuracy
+            best_value = data[best_run].wpm if by_wpm else data[best_run].accuracy
+            if value > best_value:
+                best_run = i
+        print("Best run:")
+        for item, value in zip(data[best_run]._fields, data[best_run]):
+            print(f'    {item:<20}{value}')
 
 def main():
     parser = argparse.ArgumentParser()
@@ -147,6 +159,7 @@ def main():
         sys.exit(1);
 
     analyazer.show_totals(stats_mode)
+    analyazer.show_best()
     analyazer.plot(stats_mode)
 
 if __name__ == "__main__":
