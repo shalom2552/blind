@@ -24,7 +24,7 @@ import datetime
 import os
 import sys
 from collections import defaultdict
-from typing import NamedTuple
+from typing import NamedTuple, Self
 
 from matplotlib.lines import lineStyles
 import matplotlib.pyplot as plt
@@ -70,8 +70,9 @@ class Analyazer:
         self.stats_data:    list[Record]  = []
         self.stats_by_mode: dict[str, list[Record]] = defaultdict(list)
         self.mode_totals: dict[str, Aggregated]
+        self.mode_to_show = 'all'
 
-    def load_stats(self):
+    def load_stats(self, mode):
         try:
             with open(self.stats_path, newline='') as stats_file:
                 reader = csv.reader(stats_file, delimiter=',')
@@ -92,19 +93,27 @@ class Analyazer:
             print(f'{e}', file=sys.stderr)
             return False
 
+        count = 0
         for r in self.stats_data:
             if r.lines == 0: continue
+            if mode and r.mode != mode: continue
             self.stats_by_mode['all'].append(r)
             self.stats_by_mode[r.mode].append(r)
+            count += 1
+
+        if count == 0:
+            print(f"no data found for mode '{mode}'")
+            return False
+
         self.mode_totals = {
             mode: aggregate(mode, records)
             for mode, records in self.stats_by_mode.items()
         }
         return True
 
-    def show_totals(self, selected_mode=''):
+    def show_totals(self):
         for mode, data in self.mode_totals.items():
-            if selected_mode and mode != selected_mode: continue
+            # if selected_mode and mode != selected_mode: continue
             print(f'mode: {mode}')
             for item, value in zip(data._fields, data):
                 print(f'    {item:<20}{value}')
@@ -122,12 +131,19 @@ class Analyazer:
         # times = [r.time for r in data]
 
         ax = plt.gca()
+        ax.set_title("Typing performance for recorded runs", fontweight='bold')
+
         ax.plot([r.wpm * r.accuracy / 100 for r in data],
                  label='wpm * accuracy', linewidth=2.5, marker='o')
+
+        max_value = max([r.wpm for r in data]) if data else 0;
+        ax.set_ylim(bottom=0, top=max(100, max_value))
+        ax.set_ylabel('wpm * accuracy', fontweight='bold')
 
         ax2 = ax.twinx()
         ax2.plot([r.wpm for r in data], label='wpm', linestyle='--', alpha=0.5)
         ax2.plot([r.accuracy for r in data], label='accuracy', linestyle='--', alpha=0.5)
+        ax2.set_ylabel('wpm & accuracy', fontweight='bold')
 
         ax.figure.legend(loc='upper left')
         plt.show()
@@ -146,7 +162,7 @@ class Analyazer:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--file", help="specify a stats file")
+    parser.add_argument("-f", "--file", help="specify stats file to show")
     parser.add_argument("-m", "--mode", help="show only specific mode")
     args = parser.parse_args()
 
@@ -155,12 +171,17 @@ def main():
 
     analyazer = Analyazer(stats_file)
 
-    if not analyazer.load_stats():
+    available_modes = ['all', 'file', 'presets', 'text']
+    if stats_mode and not stats_mode in available_modes:
+        print(f"error: invalid mode '{stats_mode}'. valid modes are {available_modes}", file=sys.stderr)
+        sys.exit(1)
+
+    if not analyazer.load_stats(stats_mode):
         sys.exit(1);
 
-    analyazer.show_totals(stats_mode)
+    analyazer.show_totals()
     analyazer.show_best()
-    analyazer.plot(stats_mode)
+    analyazer.plot()
 
 if __name__ == "__main__":
     try:
