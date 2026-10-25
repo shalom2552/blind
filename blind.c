@@ -66,12 +66,15 @@ const char* NAME;
 
 #define AWL                 5.0f // Average letters per word
 #define MAX_TEXT_LINE_LEN   2048
-#define DEFAULT_OUTPUT_PATH "/.local/share/blind-tt/blind_stats.csv"
+
+#define DEFAULT_OUTPUT_PATH "/blind-tt/blind_stats.csv"
+#define STATE_FILE_PATH     "/blind-tt/state.bin"
 
 #define home()       getenv("HOME")
+#define xdg_data()   getenv("XDG_DATA_HOME")
 #define no_display() getenv("NDISPLAY")
 #define display(...) do { if (!no_display()) printf(""__VA_ARGS__); fflush(stdout); } while (0)
-#define DEBUG(...)   fprintf(stderr, "DEBUG: "__VA_ARGS__)
+#define DEBUG(...)   do { fprintf(stderr, "DEBUG: "__VA_ARGS__); puts(""); } while (0)
 
 #define REDBG "\033[41m"
 #define RED   "\033[31m"
@@ -119,6 +122,14 @@ struct {
     double total_time;
     double accuracy;
 } score = {0};
+
+const size_t state_version = 2;
+typedef struct {
+    size_t state_version;
+    size_t presets_idx;
+} State;
+const State default_state = {.state_version = state_version};
+State state;
 
 // https://clagnut.com/blog/2380
 static char* Presets[] = {
@@ -328,9 +339,11 @@ void play(char* line)
 
 void run_presets(void)
 {
-    int i = 0;
-    while (Presets[i] != 0) {
-        play(Presets[i++]);
+    if (!Presets[state.presets_idx]) state.presets_idx = 0;
+    size_t idx = state.presets_idx;
+    while (Presets[idx] != 0) {
+        play(Presets[idx++]);
+        state.presets_idx = idx;
         display("\n");
     }
     print_totals();
@@ -371,9 +384,9 @@ void run_file_input(void)
         if (++line_c < file_start_line) continue;
 
         // only run regular lines (ending with '\n')
-        char* c = strchr(line, '\n');
-        if (c) {
-            *c = '\0';
+        char* eol = strchr(line, '\n');
+        if (eol) {
+            *eol = '\0';
             play(line);
         }
     }
@@ -408,32 +421,38 @@ int ensure_dir_exists(const char* path)
     return 0;
 }
 
+FILE* open_xdg_data_file(const char* path, const char* modes)
+{
+    char* xdg_data = xdg_data();
+    char* fallback = "";
+    char* slash    = "";
+    if (!xdg_data || !*xdg_data) {
+        fallback = home();
+        xdg_data = "/.local/share";
+        slash = "/";
+        if (!fallback || !*fallback) return NULL;
+    }
+    char file_path[PATH_MAX];
+    snprintf(file_path, PATH_MAX - 1, "%s%s%s%s",
+             fallback, slash, xdg_data, path);
+    if (ensure_dir_exists(file_path)) return NULL;
+    return fopen(file_path, modes);
+}
+
 void write_summary_to_file(void)
 {
-    char* home_usr = home();
-    if (home_usr == NULL) {
-        fprintf(stderr, "%s: cannot get HOME environment variable for output file path\n", NAME);
-        return;
-    }
-    if (!output_file_path) {
-        output_file_path = home();
-        strcat(output_file_path, DEFAULT_OUTPUT_PATH);
-    }
-    if (ensure_dir_exists(output_file_path) != 0) {
-        perror("mkdir");
-        return;
-    }
-
-    FILE* output_file = fopen(output_file_path, "a");
+    if (!output_file_path) output_file_path = DEFAULT_OUTPUT_PATH;
+    FILE* output_file = open_xdg_data_file(output_file_path, "a");
     if (!output_file) {
-        perror("fopen");
+        fprintf(stderr, "%s: could not save result score: %s: %s",
+                NAME, output_file_path, strerror(errno));
         return;
     }
 
     long file_size = ftell(output_file);
     if (file_size < 0) {
         fprintf(stderr, "%s: cannot get output file size for '%s': %s\n",
-            NAME, output_file_path, strerror(errno));
+                NAME, output_file_path, strerror(errno));
         fclose(output_file);
         return;
     }
@@ -457,26 +476,47 @@ void write_summary_to_file(void)
     int fprintf_res = fprintf(output_file, "%lld,%s,%d,%d,%d,%d,%d,%d,%.2f\n",
                 (long long)time(NULL), mode, score.lines_count,
                 score.lines_skipped, score.total_letters, score.correct_letters,
-                score.typed_errors, score.wpm, score.accuracy
-    );
+                score.typed_errors, score.wpm, score.accuracy);
 
     if (fprintf_res < 0) {
         fprintf(stderr, "%s: cannot write session statistics to '%s': %s\n",
-            NAME, output_file_path, strerror(errno)
-        );
+                NAME, output_file_path, strerror(errno));
         fclose(output_file);
         return;
     }
 
     if (fclose(output_file) != 0) {
         fprintf(stderr, "%s: cannot close output file '%s': %s\n",
-            NAME, output_file_path, strerror(errno)
-        );
+                NAME, output_file_path, strerror(errno));
     }
+}
+
+void load_state(void)
+{
+    FILE* state_file = open_xdg_data_file(STATE_FILE_PATH, "rb");
+    if (!state_file) return;
+    if (fread(&state, sizeof(State), 1, state_file) != 1
+            || state.state_version != state_version) {
+        state = default_state;
+    }
+    fclose(state_file);
+}
+
+void save_state(void)
+{
+    FILE* state_file = open_xdg_data_file(STATE_FILE_PATH, "wb");
+    if (!state_file) {
+        fprintf(stderr, "%s: could not save state file: %s\n", NAME, strerror(errno));
+        return;
+    }
+    fwrite(&state, sizeof(State), 1, state_file);
+    fclose(state_file);
 }
 
 void init(void)
 {
+    load_state();
+    atexit(save_state);
     if (term_initialized) return;
     if (!no_display()) {
         tcgetattr(STDIN_FILENO, &term);
