@@ -565,14 +565,14 @@ void parse_args(int argc, char** argv)
             { "reset",       no_argument,       0, 'r'                 },
             { "file",        required_argument, 0, 'f'                 },
             { "start-line",  required_argument, 0, 'l'                 },
+            { "output",      optional_argument, 0, 'o'                 },
             { "allow-back",  no_argument,       0, OPT_ALLOW_BACKSPACE },
             { "show-actual", no_argument,       0, OPT_SHOW_ACTUAL     },
             { "alt-screen",  no_argument,       0, OPT_ALT_SCREEN      },
-            { "output",      optional_argument, 0, 'o'                 },
             {0},
         };
 
-        c = getopt_long(argc, argv, "hbvo:f:l:", lo, &option_idx);
+        c = getopt_long(argc, argv, "hvbrf:l:o:", lo, &option_idx);
         if (c == -1) break;
 
         switch (c) {
