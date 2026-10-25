@@ -1,4 +1,4 @@
-VERSION := $(shell git describe --abbrev=0 --always --tags 2>/dev/null || echo unknown)
+VERSION != git describe --abbrev=0 --always --tags 2>/dev/null || echo unknown
 CFLAGS  += -std=c99 -DVERSION=\"$(VERSION)\"
 
 TRG := blind

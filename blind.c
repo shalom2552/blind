@@ -556,7 +556,7 @@ void write_summary_to_file(void)
             return;
         }
     }
-    
+
     if (setlocale(LC_NUMERIC, "C") == NULL) {
         fprintf(stderr, "%s: cannot set numeric locale to C: %s\n", NAME, strerror(errno));
         free(saved_cur_locale);
