@@ -29,8 +29,9 @@ Keys:
 
 Options:
   -h, --help           display help message
-  -b, --block          block on wrong typing
   -v, --version        show version number
+  -b, --block          block on wrong typing
+  -r, --reset          reset the saved state
   -f, --file=FILE      practice on FILE lines
   -l, --start-line=N   file line number to start on
   -o, --output=FILE    specify FILE to store stats
@@ -40,8 +41,8 @@ Options:
 
 Arguments:
   STRING               one line of text. quoted or unquoted.
-  FILE                 any file containing text
   NUMBER               Positive whole number (natural)
+  FILE                 any file containing text
 
 Examples:
   blind -b

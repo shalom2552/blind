@@ -12,8 +12,9 @@
  *
  * Options:
  *   -h, --help           display help message
- *   -b, --block          block on wrong typing
  *   -v, --version        show version number
+ *   -b, --block          block on wrong typing
+ *   -r, --reset          reset the saved state
  *   -f, --file=FILE      practice on FILE lines
  *   -l, --start-line=N   file line number to start on
  *   -o, --output=FILE    specify FILE to store stats
@@ -23,8 +24,8 @@
  *
  * Arguments:
  *   STRING               one line of text. quoted or unquoted.
- *   FILE                 any file containing text
  *   NUMBER               Positive whole number (natural)
+ *   FILE                 any file containing text
  *
  * Examples:
  *   blind -b
@@ -33,7 +34,7 @@
  *   blind --output=stats.csv
  *   blind --alt-screen --show-actual --allow-back -o /dev/null
  *
- * Default stats file: $HOME/DEFAULT_OUTPUT_PATH
+ * Default stats file: $XDG_DATA_HOME/DEFAULT_OUTPUT_PATH
  *
  * repo: https://github.com/shalom2552/blind.git
  * author: shalom2552
@@ -104,6 +105,7 @@ int show_actual_typed_mode = 0;
 int hide_line_score        = 0;
 int run_in_alt_screen      = 0;
 int file_start_line        = 1;
+int reset_state            = 0;
 
 char* input_file_path   = NULL;
 char* input_string_line = NULL;
@@ -174,8 +176,9 @@ void help(void)
         "\n"
         "Options:\n"
         "  -h, --help           display help message\n"
-        "  -b, --block          block on wrong typing\n"
         "  -v, --version        show version number\n"
+        "  -b, --block          block on wrong typing\n"
+        "  -r, --reset          reset the saved state\n"
         "  -f, --file=FILE      practice on FILE lines\n"
         "  -l, --start-line=N   file line number to start on\n"
         "  -o, --output=FILE    specify FILE to store stats\n"
@@ -185,8 +188,8 @@ void help(void)
         "\n"
         "Arguments:\n"
         "  STRING               one line of text. quoted or unquoted.\n"
-        "  FILE                 any file containing text\n"
         "  NUMBER               Positive whole number (natural)\n"
+        "  FILE                 any file containing text\n"
         "\n"
         "Examples:\n"
         "  blind -b\n"
@@ -195,10 +198,11 @@ void help(void)
         "  blind --output=stats.csv\n"
         "  blind --alt-screen --show-actual --allow-back -o /dev/null\n"
         "\n"
-        "Default stats file: $HOME" DEFAULT_OUTPUT_PATH "\n"
+        "Default stats file: %s" DEFAULT_OUTPUT_PATH "\n"
         "\n"
         "Bugs can be reported on GitHub:\n"
         "https://github.com/shalom2552/blind.git\n"
+        ,xdg_data()
     );
 }
 
@@ -496,7 +500,8 @@ void load_state(void)
     FILE* state_file = open_xdg_data_file(STATE_FILE_PATH, "rb");
     if (!state_file) return;
     if (fread(&state, sizeof(State), 1, state_file) != 1
-            || state.state_version != state_version) {
+            || state.state_version != state_version
+            || reset_state == 1) {
         state = default_state;
     }
     fclose(state_file);
@@ -557,6 +562,7 @@ void parse_args(int argc, char** argv)
             { "help",        no_argument,       0, 'h'                 },
             { "version",     no_argument,       0, 'v'                 },
             { "block",       no_argument,       0, 'b'                 },
+            { "reset",       no_argument,       0, 'r'                 },
             { "file",        required_argument, 0, 'f'                 },
             { "start-line",  required_argument, 0, 'l'                 },
             { "allow-back",  no_argument,       0, OPT_ALLOW_BACKSPACE },
@@ -594,6 +600,10 @@ void parse_args(int argc, char** argv)
 
             case 'o':
                 output_file_path = optarg;
+                break;
+
+            case 'r':
+                reset_state = 1;
                 break;
 
             case OPT_ALLOW_BACKSPACE:
