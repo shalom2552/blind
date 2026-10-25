@@ -48,6 +48,7 @@
 #include <limits.h>
 #include <locale.h>
 #include <signal.h>
+#include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -104,8 +105,8 @@ int allow_backspace_mode   = 0;
 int show_actual_typed_mode = 0;
 int hide_line_score        = 0;
 int run_in_alt_screen      = 0;
-int file_start_line        = 1;
 int reset_state            = 0;
+size_t file_start_line     = 1;
 
 char* input_file_path   = NULL;
 char* input_string_line = NULL;
@@ -125,12 +126,18 @@ struct {
     double accuracy;
 } score = {0};
 
-const size_t state_version = 2;
+const size_t state_version = 3; // validation number
 typedef struct {
     size_t state_version;
     size_t presets_idx;
+    char   last_file[PATH_MAX];
+    size_t line_of_last_file;
 } State;
-const State default_state = {.state_version = state_version};
+const State default_state = {
+    .state_version     = state_version,
+    .last_file         = "",
+    .line_of_last_file = 1,
+};
 State state;
 
 // https://clagnut.com/blog/2380
@@ -176,6 +183,16 @@ void version(void)
 void usage(void)
 {
     fprintf(stderr, "%s: usage: %s [OPTIONS] [STRING|FILE]\n", NAME, NAME);
+}
+
+void info(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    printf(DIM"info: ");
+    vprintf(fmt, args);
+    puts(RST);
+    va_end(args);
 }
 
 void help(void)
@@ -367,6 +384,9 @@ void play(char* line)
 void run_presets(void)
 {
     if (!Presets[state.presets_idx]) state.presets_idx = 0;
+    if (state.presets_idx) {
+        info("continuing at preset %d (reset with -r)", state.presets_idx + 1);
+    }
     size_t idx = state.presets_idx;
     while (Presets[idx] != 0) {
         play(Presets[idx++]);
@@ -396,9 +416,24 @@ void run_file_input(void)
 {
     FILE*   finput;
     char*   line   = NULL;
-    int     line_c = 1;
+    size_t  line_c = 1;
     size_t  size   = 0;
     ssize_t nread;
+
+    // store/restore saved file info
+    char fullpath[PATH_MAX];
+    if (!realpath(input_file_path, fullpath)) {
+        fprintf(stderr, "%s: %s: %s\n", NAME, strerror(errno), input_file_path);
+        return;
+    }
+    // if this is the same file from last run, restore its line number
+    if (!strcmp(state.last_file, fullpath)) {
+        if (file_start_line == 1 && state.line_of_last_file > 1) {
+            file_start_line = state.line_of_last_file;
+            info("continuing at line %d (reset with -r)", file_start_line);
+        }
+    }
+    strcpy(state.last_file, fullpath); // save last_file
 
     finput = fopen(input_file_path, "r");
     if (!finput) {
@@ -408,7 +443,11 @@ void run_file_input(void)
 
     // play each line of the file
     while ((nread = getline(&line, &size, finput)) != -1) {
-        if (++line_c < file_start_line) continue;
+        state.line_of_last_file = line_c;
+        if (line_c < file_start_line) {
+            ++line_c;
+            continue;
+        }
 
         // only run regular lines (ending with '\n')
         char* eol = strchr(line, '\n');
@@ -416,6 +455,7 @@ void run_file_input(void)
             *eol = '\0';
             play(line);
         }
+        ++line_c;
     }
 
     free(line);
