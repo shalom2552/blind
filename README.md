@@ -28,33 +28,29 @@ Keys:
   <CTRL-C>             EXIT at any time
 
 Options:
-  -h                   display help message
-  -v                   show version number
-  -b                   block on wrong typing
-  -f FILE              practice on FILE lines
-  -l NUMBER            file line number to start on
-  -o FILE              specifiy FILE to store stats
- 
-  --help               display help message
-  --block              block on wrong typing
-  --version            show version number
-  --file=FILE          practice on FILE lines
-  --output=FILE        specifiy FILE to store stats
-  --start-line=N       file line number to start on
-  --show-actual        show the actual typed letter
-  --allow-back         allow backspace for correction
-  --alt-screen         run the program in alt-screen
+  -h, --help           display help message
+  -b, --block          block on wrong typing
+  -v, --version        show version number
+  -f, --file=FILE      practice on FILE lines
+  -l, --start-line=N   file line number to start on
+  -o, --output=FILE    specify FILE to store stats
+      --show-actual    show the actual typed letter
+      --allow-back     allow backspace for correction
+      --alt-screen     run the program in alt-screen
 
 Arguments:
   STRING               one line of text. quoted or unquoted.
   FILE                 any file containing text
+  NUMBER               Positive whole number (natural)
 
-Default stats file: $HOME/.local/share/blind-tt/blind_stats.csv
-
-Example:
+Examples:
   blind -b
   blind "line to practice on"
   blind --file <path-to-file> -l 10
+  blind --output=stats.csv
+  blind --alt-screen --show-actual --allow-back -o /dev/null
+
+Default stats file: $HOME/.local/share/blind-tt/blind_stats.csv
 ```
 
 ## Licence

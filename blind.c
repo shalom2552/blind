@@ -11,31 +11,29 @@
  *   <CTRL-C>             EXIT at any time
  *
  * Options:
- *   -h                   display help message
- *   -v                   show version number
- *   -b                   block on wrong typing
- *   -f FILE              practice on FILE lines
- *   -l N                 file line number to start on
- *   -o FILE              specifiy FILE to store stats
- *
- *   --help               display help message
- *   --block              block on wrong typing
- *   --version            show version number
- *   --file=FILE          practice on FILE lines
- *   --start-line=N       file line number to start on
- *   --show-actual        show the actual typed letter
- *   --allow-back         allow backspace for correction
- *   --alt-screen         run the program in alt-screen
- *   --output=FILE        specifiy FILE to store stats
+ *   -h, --help           display help message
+ *   -b, --block          block on wrong typing
+ *   -v, --version        show version number
+ *   -f, --file=FILE      practice on FILE lines
+ *   -l, --start-line=N   file line number to start on
+ *   -o, --output=FILE    specify FILE to store stats
+ *       --show-actual    show the actual typed letter
+ *       --allow-back     allow backspace for correction
+ *       --alt-screen     run the program in alt-screen
  *
  * Arguments:
  *   STRING               one line of text. quoted or unquoted.
  *   FILE                 any file containing text
+ *   NUMBER               Positive whole number (natural)
  *
- * Example:
+ * Examples:
  *   blind -b
- *   blind \"line to practice on\"
+ *   blind "line to practice on"
  *   blind --file <path-to-file> -l 10
+ *   blind --output=stats.csv
+ *   blind --alt-screen --show-actual --allow-back -o /dev/null
+ *
+ * Default stats file: $HOME/DEFAULT_OUTPUT_PATH
  *
  * repo: https://github.com/shalom2552/blind.git
  * author: shalom2552
@@ -164,32 +162,27 @@ void help(void)
         "  <CTRL-C>             EXIT at any time\n"
         "\n"
         "Options:\n"
-        "  -h                   display help message\n"
-        "  -v                   show version number\n"
-        "  -b                   block on wrong typing\n"
-        "  -f FILE              practice on FILE lines\n"
-        "  -l N                 file line number to start on\n"
-        "  -o FILE              specifiy FILE to store stats\n"
-        "\n"
-        "  --help               display help message\n"
-        "  --block              block on wrong typing\n"
-        "  --version            show version number\n"
-        "  --file=FILE          practice on FILE lines\n"
-        "  --start-line=N       file line number to start on\n"
-        "  --show-actual        show the actual typed letter\n"
-        "  --allow-back         allow backspace for correction\n"
-        "  --alt-screen         run the program in alt-screen\n"
-        "  --output=FILE        specifiy FILE to store stats\n"
+        "  -h, --help           display help message\n"
+        "  -b, --block          block on wrong typing\n"
+        "  -v, --version        show version number\n"
+        "  -f, --file=FILE      practice on FILE lines\n"
+        "  -l, --start-line=N   file line number to start on\n"
+        "  -o, --output=FILE    specify FILE to store stats\n"
+        "      --show-actual    show the actual typed letter\n"
+        "      --allow-back     allow backspace for correction\n"
+        "      --alt-screen     run the program in alt-screen\n"
         "\n"
         "Arguments:\n"
         "  STRING               one line of text. quoted or unquoted.\n"
         "  FILE                 any file containing text\n"
+        "  NUMBER               Positive whole number (natural)\n"
         "\n"
-        "Example:\n"
+        "Examples:\n"
         "  blind -b\n"
-        "  blind --output=stats.csv \"line to practice on\"\n"
         "  blind \"line to practice on\"\n"
         "  blind --file <path-to-file> -l 10\n"
+        "  blind --output=stats.csv\n"
+        "  blind --alt-screen --show-actual --allow-back -o /dev/null\n"
         "\n"
         "Default stats file: $HOME" DEFAULT_OUTPUT_PATH "\n"
         "\n"
