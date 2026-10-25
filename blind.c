@@ -40,7 +40,7 @@
  * author: shalom2552
  * date: 2026-09-24
  */
-#define _POSIX_C_SOURCE 200809L
+#define _XOPEN_SOURCE 700
 #include <assert.h>
 #include <complex.h>
 #include <errno.h>
@@ -246,8 +246,12 @@ void print_totals(void)
 
 void play(char* line)
 {
-    tcflush(STDIN_FILENO, TCIFLUSH);              // flush the input buffer
-    struct winsize w; ioctl(0, TIOCGWINSZ, &w);   // get terminal size
+    tcflush(STDIN_FILENO, TCIFLUSH); // flush the input buffer
+    struct winsize w;
+    if (ioctl(STDIN_FILENO, TIOCGWINSZ, &w) == -1) { // get terminal size
+        perror("ioctl");
+        return;
+    }
 
     // Convert UTF-8 input to wide characters for character-based typing.
     wchar_t s[MAX_TEXT_LINE_LEN];
