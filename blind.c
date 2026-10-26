@@ -42,7 +42,6 @@
  */
 #define _XOPEN_SOURCE 700
 #include <assert.h>
-#include <complex.h>
 #include <errno.h>
 #include <getopt.h>
 #include <limits.h>
