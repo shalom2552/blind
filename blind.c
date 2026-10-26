@@ -99,6 +99,11 @@ enum InputMode {
     FILE_INPUT,
 };
 
+enum KEYS {
+    KEY_ESC = 27,
+    KEY_DEL = 127,
+};
+
 int input_mode = DEFAULT_INPUT;
 int blocking_mode          = 0;
 int allow_backspace_mode   = 0;
@@ -110,7 +115,7 @@ size_t file_start_line     = 1;
 
 char* input_file_path   = NULL;
 char* input_string_line = NULL;
-char* output_file_path = NULL;
+char* output_file_path  = NULL;
 
 int term_initialized = 0;
 struct termios term;
@@ -271,46 +276,46 @@ void play(char* line)
     }
 
     // Convert UTF-8 input to wide characters for character-based typing.
-    wchar_t s[MAX_TEXT_LINE_LEN];
-    if (mbstowcs(s, line, MAX_TEXT_LINE_LEN) == (size_t)-1) {
+    wchar_t text[MAX_TEXT_LINE_LEN];
+    if (mbstowcs(text, line, MAX_TEXT_LINE_LEN) == (size_t)-1) {
         perror("mbstowcs");
         return;
     }
-    s[MAX_TEXT_LINE_LEN - 1] = L'\0';
+    text[MAX_TEXT_LINE_LEN - 1] = L'\0';
 
-    if (wcslen(s) > w.ws_col) s[w.ws_col] = L'\0'; // trim the line
-    display(DIM"\n%ls\r"RST, s);                  // print dimmed line
+    if (wcslen(text) > w.ws_col) text[w.ws_col] = L'\0'; // trim the line
+    display(DIM"\n%ls\r"RST, text);                  // print dimmed line
 
     int idx     = 0;
     int correct = 0;
     int errors  = 0;
     int total   = 0;
     struct timespec start, end;
-    wchar_t* history = (wchar_t*)malloc(wcslen(s) * sizeof(wchar_t));
+    wchar_t* history = (wchar_t*)malloc(wcslen(text) * sizeof(wchar_t));
     assert(history && "Buy more RAM");
 
-    wchar_t* line_end = wcschr(s, L'\n');
+    wchar_t* line_end = wcschr(text, L'\n');
     if (line_end) *line_end = L'\0';
 
     // skip spaces and tabs prefix
-    for (; iswspace(s[idx]); ++idx) {
+    for (; iswspace(text[idx]); ++idx) {
         display(" ");
     }
 
-    while (s[idx] != '\0') {
+    while (text[idx] != '\0') {
 
         // line end with space
-        if (iswspace(s[idx]) && s[idx + 1] == L'\0') {
+        if (iswspace(text[idx]) && text[idx + 1] == L'\0') {
             ++idx; break;
         }
 
         // skip long spaces and tabs
-        if (idx > 0 && iswspace(s[idx - 1]) && iswspace(s[idx])) {
+        if (idx > 0 && iswspace(text[idx - 1]) && iswspace(text[idx])) {
             ++idx; display(" "); continue;
         }
 
-        wint_t c = getwchar();
-        if (c == WEOF) {
+        wint_t c_input = getwchar();
+        if (c_input == WEOF) {
             free(history);
             perror("getwchar");
             return;
@@ -319,42 +324,42 @@ void play(char* line)
         // start the clock on first type (after getchar)
         if (!total) clock_gettime(CLOCK_MONOTONIC, &start);
 
-        if (c == L'\n') { // skip line on enter
-            if ((size_t)idx != wcslen(s) - 1) {
+        if (c_input == L'\n') { // skip line on enter
+            if ((size_t)idx != wcslen(text) - 1) {
                 score.lines_skipped += 1;
                 total = 0;
             }
             break;
 
-        } else if (c == 27) { // skip escape keys
+        } else if (c_input == KEY_ESC) { // skip escape keys
             getwchar(); getwchar(); continue;
 
-        } else if (c == 127) { // backspace: backtrack
+        } else if (c_input == KEY_DEL) { // backspace: backtrack
             if (idx > 0 && allow_backspace_mode) {
                 --idx;
                 --total;
-                if (history[idx] == s[idx]) {
+                if (history[idx] == text[idx]) {
                     --correct;
                 } else {
                     --errors;
                 }
-                display(BACK DIM"%lc"BACK RST, s[idx]);
+                display(BACK DIM"%lc"BACK RST, text[idx]);
             }
             continue;
         }
 
-        if (c == s[idx]) {
+        if (c_input == text[idx]) {
             ++correct;
-            display(GREEN"%lc"RST, c);
+            display(GREEN"%lc"RST, c_input);
         } else {
             ++errors;
             if (blocking_mode) continue;
-            char* color = (iswspace(s[idx]) || iswspace(c)) ? REDBG : RED;
-            display("%s%lc"RST, color, show_actual_typed_mode ? c : s[idx]);
+            char* color = (iswspace(text[idx]) || iswspace(c_input)) ? REDBG : RED;
+            display("%s%lc"RST, color, show_actual_typed_mode ? c_input : text[idx]);
         }
 
         fflush(stdout);
-        history[idx++] = c;
+        history[idx++] = c_input;
         ++total;
     }
     clock_gettime(CLOCK_MONOTONIC, &end);
