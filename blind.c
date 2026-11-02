@@ -40,7 +40,7 @@
  * author: shalom2552
  * date: 2026-09-24
  */
-#define _XOPEN_SOURCE 700
+#define _XOPEN_SOURCE 700 // NOLINT(bugprone-reserved-identifier)
 #include <assert.h>
 #include <errno.h>
 #include <getopt.h>
@@ -60,7 +60,7 @@
 #include <wchar.h>
 #include <wctype.h>
 
-const char* NAME;
+static const char* NAME;
 #ifndef VERSION
 #define VERSION "unknown"
 #endif // VERSION
@@ -70,12 +70,6 @@ const char* NAME;
 
 #define DEFAULT_OUTPUT_PATH "/blind-tt/blind_stats.csv"
 #define STATE_FILE_PATH     "/blind-tt/state.bin"
-
-#define home()       getenv("HOME")
-#define xdg_data()   getenv("XDG_DATA_HOME")
-#define no_display() getenv("NDISPLAY")
-#define display(...) do { if (!no_display()) printf(""__VA_ARGS__); fflush(stdout); } while (0)
-#define DEBUG(...)   do { fprintf(stderr, "DEBUG: "__VA_ARGS__); puts(""); } while (0)
 
 #define REDBG "\033[41m"
 #define RED   "\033[31m"
@@ -98,7 +92,7 @@ enum InputMode {
     FILE_INPUT,
 };
 
-enum KEYS {
+enum Keys {
     KEY_ESC = 27,
     KEY_DEL = 127,
 };
@@ -179,6 +173,30 @@ static char* Presets[] = {
     0,
 };
 
+static inline char* no_display(void)
+{
+    return getenv("NDISPLAY");
+}
+
+static inline void display(char* fmt, ...)
+{
+    if (no_display()) return;
+    va_list args;
+    va_start(args, fmt);
+    vprintf(fmt, args);
+    va_end(args);
+}
+
+static inline void debug(char* fmt, ...)
+{
+    fprintf(stderr, "DEBUG: ");
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(stderr, fmt, args);
+    va_end(args);
+    puts("");
+}
+
 void version(void)
 {
     fprintf(stderr, "%s %s\n", NAME, VERSION);
@@ -186,7 +204,7 @@ void version(void)
 
 void usage(void)
 {
-    fprintf(stderr, "%s: usage: %s [OPTIONS] [STRING|FILE]\n", NAME, NAME);
+    fprintf(stderr, "usage: %s [OPTIONS] [STRING|FILE]\n", NAME);
 }
 
 void info(const char* fmt, ...)
@@ -201,7 +219,7 @@ void info(const char* fmt, ...)
 
 void help(void)
 {
-    fprintf(stderr,
+    fprintf(stdout,
         "A program to practice touch-typing in the terminal.\n"
         "\n"
         "  Practice touch-typing speed, right on the terminal\n"
@@ -242,7 +260,7 @@ void help(void)
         "\n"
         "Bugs can be reported on GitHub:\n"
         "https://github.com/shalom2552/blind.git\n"
-        ,xdg_data()
+        , getenv("XDG_DATA_HOME")
     );
 }
 
@@ -323,7 +341,7 @@ void play(char* line)
         // start the clock on first type (after getchar)
         if (!total) clock_gettime(CLOCK_MONOTONIC, &start);
 
-        if (c_input == L'\n') { // skip line on enter
+        if ((wchar_t)c_input == L'\n') { // skip line on enter
             if ((size_t)idx != wcslen(text) - 1) {
                 score.lines_skipped += 1;
                 total = 0;
@@ -494,11 +512,11 @@ int ensure_dir_exists(const char* path)
 
 FILE* open_xdg_data_file(const char* path, const char* modes)
 {
-    char* xdg_data = xdg_data();
+    char* xdg_data = getenv("XDG_DATA_HOME");
     char* fallback = "";
     char* slash    = "";
     if (!xdg_data || !*xdg_data) {
-        fallback = home();
+        fallback = getenv("HOME");
         xdg_data = "/.local/share";
         slash = "/";
         if (!fallback || !*fallback) return NULL;
@@ -626,7 +644,7 @@ void init(void)
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
         if (run_in_alt_screen) display("\033[?1049h\033[0H");
     } else {
-        DEBUG("running in NDISPLAY mode\n");
+        debug("running in NDISPLAY mode\n");
     }
     term_initialized = 1;
 }
